@@ -108,7 +108,9 @@ export function showModal(card) {
 
   modal.innerHTML = `
     <div class="modal-content">
-      <button class="modal-close">&times;</button>
+      <div class="modal-header">
+        <button class="modal-close">&times;</button>
+      </div>
       <div class="modal-body">
         <div class="modal-image-section">
           <img src="${card.image_front || ''}" alt="${card.name}" class="modal-card-image" id="modal-card-img">

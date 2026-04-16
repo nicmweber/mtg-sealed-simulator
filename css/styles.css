@@ -468,14 +468,19 @@ body {
   max-width: 1100px;
   width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   position: relative;
 }
 
+.modal-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+
 .modal-close {
-  position: absolute;
-  top: 8px;
-  right: 12px;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -483,13 +488,21 @@ body {
   cursor: pointer;
   z-index: 10;
   line-height: 1;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .modal-close:hover { color: var(--text); }
 
 .modal-body {
   display: flex;
   gap: 24px;
-  padding: 24px;
+  padding: 0 24px 24px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-image-section {
@@ -1300,19 +1313,14 @@ body {
     padding: 0;
   }
 
-  .modal-close {
-    position: sticky;
-    top: 0;
-    right: 0;
-    float: right;
-    z-index: 20;
+  .modal-header {
+    padding: 4px 8px;
     background: var(--bg-surface);
+  }
+
+  .modal-close {
     width: 44px;
     height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0 0 0 8px;
   }
 
   .modal-body {

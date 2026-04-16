@@ -33,7 +33,10 @@ function trimCard(card) {
     trimmed.image_front = card.image_uris.normal;
   }
 
-  // Handle double-faced cards (prepare layout)
+  // Handle double-faced cards
+  const DFC_LAYOUTS = ['prepare', 'transform', 'modal_dfc', 'reversible_card'];
+  const isDFC = DFC_LAYOUTS.includes(card.layout);
+
   if (card.card_faces && card.card_faces.length > 0) {
     trimmed.card_faces = card.card_faces.map(face => ({
       name: face.name,
@@ -48,12 +51,13 @@ function trimCard(card) {
     if (!trimmed.image_front && card.card_faces[0].image_uris) {
       trimmed.image_front = card.card_faces[0].image_uris.normal;
     }
-    if (card.card_faces[1]?.image_uris) {
+    // Only set back image for actual double-faced card layouts
+    if (isDFC && card.card_faces[1]?.image_uris) {
       trimmed.image_back = card.card_faces[1].image_uris.normal;
     }
 
-    // Derive back face URL from front if not available
-    if (trimmed.image_front && !trimmed.image_back && card.layout === 'prepare') {
+    // Derive back face URL from front if not available (prepare layout)
+    if (isDFC && trimmed.image_front && !trimmed.image_back) {
       trimmed.image_back = trimmed.image_front.replace('/front/', '/back/');
     }
 
