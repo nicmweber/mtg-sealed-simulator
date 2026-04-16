@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOS Sealed Simulator — Secrets of Strixhaven</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <h1>Secrets of Strixhaven</h1>
+      <span class="subtitle">Sealed Simulator</span>
+    </div>
+    <div class="header-right">
+      <button id="btn-new-pool" class="btn btn-primary" title="Generate a new sealed pool">New Pool</button>
+    </div>
+  </header>
+
+  <!-- Loading State -->
+  <div id="loading" class="loading-screen">
+    <div class="loading-spinner"></div>
+    <p>Loading cards from Scryfall...</p>
+  </div>
+
+  <!-- Pack Opening Section -->
+  <section id="pack-opening" class="pack-opening hidden">
+    <h2>Open Your Packs</h2>
+    <p class="pack-instructions">Click each pack to open it. You'll get 6 Play Boosters + 1 promo rare/mythic.</p>
+    <div class="pack-buttons">
+      <button class="pack-btn" data-pack="0">Pack 1</button>
+      <button class="pack-btn" data-pack="1">Pack 2</button>
+      <button class="pack-btn" data-pack="2">Pack 3</button>
+      <button class="pack-btn" data-pack="3">Pack 4</button>
+      <button class="pack-btn" data-pack="4">Pack 5</button>
+      <button class="pack-btn" data-pack="5">Pack 6</button>
+      <button class="pack-btn pack-btn-promo" data-pack="promo">Promo!</button>
+    </div>
+    <div id="pack-reveal" class="pack-reveal"></div>
+    <button id="btn-open-all" class="btn btn-secondary" style="margin-top:12px">Open All Remaining</button>
+    <button id="btn-view-pool" class="btn btn-primary hidden" style="margin-top:12px">View Full Pool &rarr;</button>
+  </section>
+
+  <!-- Floating Action Bar -->
+  <nav id="toolbar" class="floating-toolbar hidden">
+    <div class="floating-toolbar-inner">
+      <div class="toolbar-section">
+        <button class="sort-btn active" data-sort="color">Color</button>
+        <button class="sort-btn" data-sort="cmc">CMC</button>
+        <button class="sort-btn" data-sort="rarity">Rarity</button>
+        <button class="sort-btn" data-sort="rating">Rating</button>
+        <button class="sort-btn" data-sort="name">Name</button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-section">
+        <button class="filter-btn color-filter" data-color="W" title="White"><span class="mana-symbol mana-w">W</span></button>
+        <button class="filter-btn color-filter" data-color="U" title="Blue"><span class="mana-symbol mana-u">U</span></button>
+        <button class="filter-btn color-filter" data-color="B" title="Black"><span class="mana-symbol mana-b">B</span></button>
+        <button class="filter-btn color-filter" data-color="R" title="Red"><span class="mana-symbol mana-r">R</span></button>
+        <button class="filter-btn color-filter" data-color="G" title="Green"><span class="mana-symbol mana-g">G</span></button>
+        <button class="filter-btn color-filter" data-color="C" title="Colorless"><span class="mana-symbol mana-c">C</span></button>
+        <button class="filter-btn filter-clear" id="btn-clear-filters" title="Clear all filters">Clear</button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-section">
+        <span class="toolbar-pool-count"><span id="pool-count">0</span> cards</span>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-section">
+        <button id="btn-toggle-view" class="btn-deck-toggle" title="Switch between pool view and deck builder">Deck Builder</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="main-content" class="main-content hidden">
+    <div id="card-grid-container" class="card-grid-container">
+      <div id="card-grid" class="card-grid"></div>
+    </div>
+    <aside id="deck-panel" class="deck-panel hidden">
+      <div id="deck-stats"></div>
+      <div id="deck-list"></div>
+      <button id="btn-export-deck" class="btn btn-secondary btn-small">Copy Deck List</button>
+    </aside>
+  </main>
+
+  <!-- Strategy Panel -->
+  <section id="strategy-panel" class="strategy-panel hidden">
+    <h2>
+      <button class="strategy-toggle" id="btn-toggle-strategy">Strategy Analysis ▼</button>
+    </h2>
+    <div id="strategy-content" class="strategy-content">
+      <div id="college-rankings" class="college-rankings"></div>
+      <div id="synergy-list" class="synergy-list"></div>
+      <div id="build-suggestion" class="build-suggestion"></div>
+    </div>
+  </section>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
