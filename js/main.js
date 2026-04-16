@@ -16,6 +16,11 @@ let activeColorFilters = new Set();
 let isDeckMode = false;
 const deckBuilder = new DeckBuilder();
 
+// ===== Mobile Detection =====
+function isMobile() {
+  return window.innerWidth <= 768;
+}
+
 // ===== DOM References =====
 const $loading = document.getElementById('loading');
 const $packOpening = document.getElementById('pack-opening');
@@ -30,6 +35,11 @@ const $btnNewPool = document.getElementById('btn-new-pool');
 const $btnToggleView = document.getElementById('btn-toggle-view');
 const $btnOpenAll = document.getElementById('btn-open-all');
 const $btnViewPool = document.getElementById('btn-view-pool');
+const $hamburger = document.getElementById('btn-hamburger');
+const $sideDrawer = document.getElementById('side-drawer');
+const $sideDrawerOverlay = document.getElementById('side-drawer-overlay');
+const $bottomSheet = document.getElementById('bottom-sheet');
+const $bottomSheetOverlay = document.getElementById('bottom-sheet-overlay');
 
 // ===== Initialize =====
 async function init() {
@@ -66,6 +76,7 @@ function startNewPool() {
   $btnToggleView.classList.remove('active');
   $btnViewPool.classList.add('hidden');
   $packReveal.innerHTML = '';
+  $hamburger.classList.add('hidden');
 
   // Reset pack buttons
   document.querySelectorAll('.pack-btn').forEach(btn => {
@@ -74,6 +85,7 @@ function startNewPool() {
   });
 
   $btnOpenAll.classList.remove('hidden');
+  closeSideDrawer();
 
   console.log('New sealed pool generated:', sealedPool);
 }
@@ -96,12 +108,10 @@ function openPack(packIndex) {
     cards = sealedPool.packs[parseInt(packIndex)];
   }
 
-  // Add to current pool
   currentPool.push(...cards);
   renderPackCards(cards, $packReveal);
   packsOpened++;
 
-  // Check if all packs opened
   const allOpened = document.querySelectorAll('.pack-btn:not(:disabled)').length === 0;
   if (allOpened) {
     $btnOpenAll.classList.add('hidden');
@@ -136,8 +146,8 @@ function showPoolView() {
   $toolbar.classList.remove('hidden');
   $mainContent.classList.remove('hidden');
   $strategyPanel.classList.remove('hidden');
+  $hamburger.classList.remove('hidden');
 
-  // Initialize deck builder with pool
   deckBuilder.init(currentPool);
   deckBuilder.onChange = () => updateDisplay();
 
@@ -151,7 +161,6 @@ function highlightSynergyCards(cardNames) {
   const cards = document.querySelectorAll('#card-grid .card-wrapper');
   cards.forEach(el => {
     const cardName = el.querySelector('img')?.alt || '';
-    // Check both full name and individual DFC face names
     const matches = nameSet.has(cardName) || cardName.split(' // ').some(n => nameSet.has(n));
     if (matches) {
       el.classList.add('synergy-highlight');
@@ -162,7 +171,6 @@ function highlightSynergyCards(cardNames) {
     }
   });
 
-  // Scroll the card grid into view
   document.getElementById('card-grid-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -172,29 +180,108 @@ function clearSynergyHighlight() {
   });
 }
 
+// ===== Side Drawer (mobile strategy) =====
+function openSideDrawer() {
+  $sideDrawer.classList.add('open');
+  $sideDrawerOverlay.classList.remove('hidden');
+  requestAnimationFrame(() => $sideDrawerOverlay.classList.add('visible'));
+}
+
+function closeSideDrawer() {
+  $sideDrawer.classList.remove('open');
+  $sideDrawerOverlay.classList.remove('visible');
+  setTimeout(() => $sideDrawerOverlay.classList.add('hidden'), 300);
+}
+
+// ===== Bottom Sheet (long-press card action) =====
+let bottomSheetCard = null;
+
+function openBottomSheet(card) {
+  bottomSheetCard = card;
+  document.getElementById('bottom-sheet-card-name').textContent = card.name;
+  const ratingBadge = document.getElementById('bottom-sheet-card-rating');
+  ratingBadge.textContent = card.rating;
+  ratingBadge.style.backgroundColor = GRADE_COLORS[card.rating] || '#666';
+
+  // Update button text based on deck state
+  const inDeck = deckBuilder.deck.some(c => c.id === card.id);
+  const addBtn = document.getElementById('bottom-sheet-add-deck');
+  if (inDeck) {
+    addBtn.innerHTML = '<span class="action-icon">&minus;</span> Remove from Deck';
+  } else {
+    addBtn.innerHTML = '<span class="action-icon">+</span> Add to Deck';
+  }
+
+  $bottomSheet.classList.add('open');
+  $bottomSheetOverlay.classList.remove('hidden');
+  requestAnimationFrame(() => $bottomSheetOverlay.classList.add('visible'));
+}
+
+function closeBottomSheet() {
+  $bottomSheet.classList.remove('open');
+  $bottomSheetOverlay.classList.remove('visible');
+  setTimeout(() => $bottomSheetOverlay.classList.add('hidden'), 300);
+  bottomSheetCard = null;
+}
+
+// ===== Long Press Detection =====
+let longPressTimer = null;
+let longPressTriggered = false;
+
+function setupLongPress(el, card) {
+  const startPress = (e) => {
+    longPressTriggered = false;
+    el.classList.add('long-press-active');
+    longPressTimer = setTimeout(() => {
+      longPressTriggered = true;
+      el.classList.remove('long-press-active');
+      openBottomSheet(card);
+    }, 500);
+  };
+
+  const cancelPress = () => {
+    clearTimeout(longPressTimer);
+    el.classList.remove('long-press-active');
+  };
+
+  el.addEventListener('touchstart', startPress, { passive: true });
+  el.addEventListener('touchend', (e) => {
+    cancelPress();
+    if (longPressTriggered) {
+      e.preventDefault();
+    }
+  });
+  el.addEventListener('touchmove', cancelPress, { passive: true });
+  el.addEventListener('touchcancel', cancelPress);
+
+  // Store flag so click handler can check
+  el.addEventListener('click', (e) => {
+    if (longPressTriggered) {
+      e.preventDefault();
+      e.stopPropagation();
+      longPressTriggered = false;
+    }
+  }, true);
+}
+
 // ===== Display Updates =====
 function updateDisplay() {
   let displayCards;
 
   if (isDeckMode) {
-    // In deck mode, show sideboard in grid, deck in panel
     displayCards = deckBuilder.sideboard;
   } else {
     displayCards = currentPool;
   }
 
-  // Apply filters
   if (activeColorFilters.size > 0) {
     displayCards = filterCards(displayCards, { colors: [...activeColorFilters] });
   }
 
-  // Apply sort
   displayCards = sortCards(displayCards, currentSort);
 
-  // Update pool count
   $poolCount.textContent = displayCards.length;
 
-  // Render grid
   const deckCardIds = new Set(deckBuilder.deck.map(c => c.id));
 
   $cardGrid.innerHTML = '';
@@ -216,7 +303,6 @@ function updateDisplay() {
     };
     el.appendChild(img);
 
-    // Rating badge
     if (card.rating) {
       const badge = document.createElement('span');
       badge.className = 'rating-badge';
@@ -225,7 +311,6 @@ function updateDisplay() {
       el.appendChild(badge);
     }
 
-    // Foil badge
     if (card.foil) {
       const foil = document.createElement('span');
       foil.className = 'foil-badge';
@@ -233,7 +318,6 @@ function updateDisplay() {
       el.appendChild(foil);
     }
 
-    // Promo badge
     if (card.isPromo) {
       const promo = document.createElement('span');
       promo.className = 'promo-badge';
@@ -241,7 +325,6 @@ function updateDisplay() {
       el.appendChild(promo);
     }
 
-    // DFC flip
     if (card.image_back) {
       const flipBtn = document.createElement('button');
       flipBtn.className = 'flip-btn';
@@ -256,20 +339,25 @@ function updateDisplay() {
       el.appendChild(flipBtn);
     }
 
-    // Click: deck mode = toggle in/out of deck, pool mode = show modal
+    // Mobile: long-press for bottom sheet
+    if (isMobile()) {
+      setupLongPress(el, card);
+    }
+
+    // Click handler
     el.style.cursor = 'pointer';
     el.addEventListener('click', () => {
+      if (longPressTriggered) return;
       if (isDeckMode) {
         deckBuilder.addToDeck(card.id);
       } else {
-        showModal(card);
+        showCardModal(card);
       }
     });
 
     $cardGrid.appendChild(el);
   }
 
-  // Update deck panel if in deck mode
   if (isDeckMode) {
     const $deckStats = document.getElementById('deck-stats');
     const $deckList = document.getElementById('deck-list');
@@ -278,15 +366,39 @@ function updateDisplay() {
   }
 }
 
+// ===== Card Modal with Add to Deck =====
+function showCardModal(card) {
+  showModal(card);
+
+  // Inject the Add to Deck button after modal is in DOM
+  setTimeout(() => {
+    const modal = document.getElementById('card-modal');
+    if (!modal) return;
+
+    const infoSection = modal.querySelector('.modal-info-section');
+    if (!infoSection) return;
+
+    const inDeck = deckBuilder.deck.some(c => c.id === card.id);
+    const btn = document.createElement('button');
+    btn.className = `modal-deck-btn ${inDeck ? 'in-deck' : ''}`;
+    btn.textContent = inDeck ? 'Remove from Deck' : 'Add to Deck';
+    btn.addEventListener('click', () => {
+      deckBuilder.toggleCard(card.id);
+      const nowInDeck = deckBuilder.deck.some(c => c.id === card.id);
+      btn.textContent = nowInDeck ? 'Remove from Deck' : 'Add to Deck';
+      btn.classList.toggle('in-deck', nowInDeck);
+    });
+    infoSection.appendChild(btn);
+  }, 0);
+}
+
 // ===== Strategy Rendering =====
 function renderStrategy() {
   const affinities = detectCollegeAffinity(currentPool);
   const synergies = findSynergies(currentPool);
   const suggestion = suggestBuild(currentPool);
 
-  // College rankings
-  const $collegeRankings = document.getElementById('college-rankings');
-  $collegeRankings.innerHTML = affinities.map((college, i) => `
+  const collegeHTML = affinities.map((college, i) => `
     <div class="college-card ${i === 0 ? 'top-pick' : ''}">
       <div class="college-name">${i === 0 ? '\u2B50 ' : ''}${college.name}</div>
       <div class="college-colors">
@@ -300,45 +412,23 @@ function renderStrategy() {
     </div>
   `).join('');
 
-  // Synergies
-  const $synergyList = document.getElementById('synergy-list');
-  if (synergies.length > 0) {
-    $synergyList.innerHTML = `
-      <h3>Detected Synergies</h3>
-      ${synergies.map(s => `
-        <div class="synergy-item synergy-clickable" data-synergy-cards="${btoa(JSON.stringify(s.cards))}">
-          <div class="synergy-item-name">
-            ${s.name}
-            <span class="synergy-strength">
-              <span class="synergy-strength-fill" style="width: ${s.strength * 10}%"></span>
-            </span>
-          </div>
-          <div class="synergy-item-desc">${s.description}</div>
-          <div class="synergy-item-cards">${s.cards.slice(0, 6).join(', ')}${s.cards.length > 6 ? '...' : ''}</div>
+  const synergyHTML = synergies.length > 0 ? `
+    <h3>Detected Synergies</h3>
+    ${synergies.map(s => `
+      <div class="synergy-item synergy-clickable" data-synergy-cards="${btoa(JSON.stringify(s.cards))}">
+        <div class="synergy-item-name">
+          ${s.name}
+          <span class="synergy-strength">
+            <span class="synergy-strength-fill" style="width: ${s.strength * 10}%"></span>
+          </span>
         </div>
-      `).join('')}
-    `;
+        <div class="synergy-item-desc">${s.description}</div>
+        <div class="synergy-item-cards">${s.cards.slice(0, 6).join(', ')}${s.cards.length > 6 ? '...' : ''}</div>
+      </div>
+    `).join('')}
+  ` : '';
 
-    // Wire synergy highlight click handlers
-    $synergyList.querySelectorAll('.synergy-clickable').forEach(el => {
-      el.addEventListener('click', () => {
-        const isActive = el.classList.contains('synergy-active');
-        // Clear all active synergies
-        $synergyList.querySelectorAll('.synergy-active').forEach(s => s.classList.remove('synergy-active'));
-        clearSynergyHighlight();
-
-        if (!isActive) {
-          el.classList.add('synergy-active');
-          const cardNames = JSON.parse(atob(el.dataset.synergyCards));
-          highlightSynergyCards(cardNames);
-        }
-      });
-    });
-  }
-
-  // Build suggestion
-  const $buildSuggestion = document.getElementById('build-suggestion');
-  $buildSuggestion.innerHTML = `
+  const suggestionHTML = `
     <h3>Recommended Build</h3>
     <div class="build-detail">
       <strong>Primary:</strong> ${suggestion.primaryCollege.name}
@@ -361,24 +451,54 @@ function renderStrategy() {
       </div>
     ` : ''}
   `;
+
+  // Desktop: render into strategy panel
+  document.getElementById('college-rankings').innerHTML = collegeHTML;
+  document.getElementById('synergy-list').innerHTML = synergyHTML;
+  document.getElementById('build-suggestion').innerHTML = `<div class="build-suggestion">${suggestionHTML}</div>`;
+
+  // Mobile: render into side drawer
+  document.getElementById('drawer-college-rankings').innerHTML = `<div class="college-rankings">${collegeHTML}</div>`;
+  document.getElementById('drawer-synergy-list').innerHTML = `<div class="synergy-list">${synergyHTML}</div>`;
+  document.getElementById('drawer-build-suggestion').innerHTML = `<div class="build-suggestion">${suggestionHTML}</div>`;
+
+  // Wire synergy click handlers on both desktop and drawer
+  wireSynergyClicks(document.getElementById('synergy-list'));
+  wireSynergyClicks(document.getElementById('drawer-synergy-list'));
+}
+
+function wireSynergyClicks(container) {
+  container.querySelectorAll('.synergy-clickable').forEach(el => {
+    el.addEventListener('click', () => {
+      const isActive = el.classList.contains('synergy-active');
+      // Clear all synergy-active across both desktop and drawer
+      document.querySelectorAll('.synergy-active').forEach(s => s.classList.remove('synergy-active'));
+      clearSynergyHighlight();
+
+      if (!isActive) {
+        el.classList.add('synergy-active');
+        const cardNames = JSON.parse(atob(el.dataset.synergyCards));
+        highlightSynergyCards(cardNames);
+        // On mobile, close drawer after selecting synergy
+        if (isMobile()) {
+          closeSideDrawer();
+        }
+      }
+    });
+  });
 }
 
 // ===== Event Listeners =====
-// New Pool
 $btnNewPool.addEventListener('click', () => {
   packsOpened = 0;
   startNewPool();
 });
 
-// Pack buttons
 document.querySelectorAll('.pack-btn').forEach(btn => {
   btn.addEventListener('click', () => openPack(btn.dataset.pack));
 });
 
-// Open all
 $btnOpenAll.addEventListener('click', openAllRemaining);
-
-// View pool
 $btnViewPool.addEventListener('click', showPoolView);
 
 // Toggle deck builder
@@ -440,7 +560,7 @@ document.getElementById('btn-export-deck').addEventListener('click', () => {
   });
 });
 
-// Strategy panel toggle
+// Strategy panel toggle (desktop)
 document.getElementById('btn-toggle-strategy').addEventListener('click', () => {
   const content = document.getElementById('strategy-content');
   const btn = document.getElementById('btn-toggle-strategy');
@@ -450,11 +570,34 @@ document.getElementById('btn-toggle-strategy').addEventListener('click', () => {
     : 'Strategy Analysis \u25BC';
 });
 
-// Keyboard shortcut: Escape closes modal
+// Hamburger menu (mobile)
+$hamburger.addEventListener('click', openSideDrawer);
+document.getElementById('btn-close-drawer').addEventListener('click', closeSideDrawer);
+$sideDrawerOverlay.addEventListener('click', closeSideDrawer);
+
+// Bottom sheet
+$bottomSheetOverlay.addEventListener('click', closeBottomSheet);
+document.getElementById('bottom-sheet-add-deck').addEventListener('click', () => {
+  if (bottomSheetCard) {
+    deckBuilder.toggleCard(bottomSheetCard.id);
+    closeBottomSheet();
+  }
+});
+document.getElementById('bottom-sheet-view-card').addEventListener('click', () => {
+  if (bottomSheetCard) {
+    const card = bottomSheetCard;
+    closeBottomSheet();
+    showCardModal(card);
+  }
+});
+
+// Keyboard: Escape closes modal, drawer, bottom sheet
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     const modal = document.getElementById('card-modal');
     if (modal) modal.remove();
+    closeSideDrawer();
+    closeBottomSheet();
   }
 });
 

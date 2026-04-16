@@ -960,17 +960,282 @@ body {
   font-size: 0.8rem;
 }
 
+/* ===== Hamburger Menu Button ===== */
+.hamburger-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.hamburger-btn span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--text);
+  border-radius: 1px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* ===== Side Drawer ===== */
+.side-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 500;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.side-drawer-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.side-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 320px;
+  max-width: 85vw;
+  height: 100vh;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  z-index: 510;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.side-drawer.open {
+  transform: translateX(0);
+}
+
+.side-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface);
+  z-index: 1;
+}
+
+.side-drawer-header h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.drawer-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.6rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.side-drawer-body {
+  padding: 16px;
+}
+
+.side-drawer-body .college-rankings {
+  grid-template-columns: 1fr;
+}
+
+/* ===== Bottom Sheet ===== */
+.bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 400;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.bottom-sheet-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+  z-index: 410;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  padding: 8px 20px 24px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+.bottom-sheet.open {
+  transform: translateY(0);
+}
+
+.bottom-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 12px;
+}
+
+.bottom-sheet-card-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bottom-sheet-card-name {
+  font-weight: 700;
+  font-size: 1rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-sheet-card-rating {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
+}
+
+.bottom-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bottom-sheet-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.bottom-sheet-action-btn:active {
+  background: var(--bg-hover);
+}
+
+.action-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: white;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* ===== Modal Add to Deck Button ===== */
+.modal-deck-btn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.modal-deck-btn:hover {
+  background: var(--accent-hover);
+}
+
+.modal-deck-btn.in-deck {
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
 /* ===== Utility ===== */
 .hidden { display: none !important; }
 
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
+  /* Compact header */
   .app-header {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     gap: 8px;
-    padding: 10px 16px;
+    padding: 8px 12px;
   }
 
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-left h1 {
+    font-size: 1rem;
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  .hamburger-btn {
+    display: flex;
+  }
+
+  .btn-primary {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Hide desktop strategy panel on mobile */
+  .strategy-panel {
+    display: none !important;
+  }
+
+  /* Floating toolbar */
   .floating-toolbar {
     bottom: 12px;
     left: 8px;
@@ -990,10 +1255,26 @@ body {
     display: none;
   }
 
-  .main-content { padding: 12px; }
+  .main-content {
+    padding: 8px;
+  }
+
+  /* Mobile deck mode: full-screen deck panel, hide card grid */
+  .main-content.deck-mode .card-grid-container {
+    display: none;
+  }
 
   .main-content.deck-mode {
-    grid-template-columns: 1fr;
+    display: block;
+  }
+
+  .main-content.deck-mode .deck-panel {
+    position: static;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    padding: 12px;
+    padding-bottom: 100px;
   }
 
   .deck-panel {
@@ -1006,14 +1287,40 @@ body {
     padding-bottom: 100px;
   }
 
+  /* Modal: full-width card image on mobile */
+  .modal-content {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+    height: 100vh;
+  }
+
+  .modal-overlay {
+    padding: 0;
+  }
+
   .modal-body {
     flex-direction: column;
   }
 
   .modal-image-section {
     flex: none;
-    max-width: 320px;
+    max-width: 100%;
     margin: 0 auto;
+    padding: 0 16px;
+  }
+
+  .modal-card-image {
+    max-height: 50vh;
+    width: auto;
+    max-width: 100%;
+    margin: 0 auto;
+    display: block;
+  }
+
+  .modal-info-section {
+    padding: 0 4px;
   }
 
   .pack-btn {
@@ -1024,5 +1331,11 @@ body {
 
   .college-rankings {
     grid-template-columns: 1fr;
+  }
+
+  /* Long-press visual feedback */
+  .card-wrapper.long-press-active {
+    transform: scale(0.96);
+    transition: transform 0.15s ease;
   }
 }

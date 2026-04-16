@@ -9,6 +9,9 @@
 <body>
   <header class="app-header">
     <div class="header-left">
+      <button id="btn-hamburger" class="hamburger-btn hidden" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
       <h1>Secrets of Strixhaven</h1>
       <span class="subtitle">Sealed Simulator</span>
     </div>
@@ -16,6 +19,38 @@
       <button id="btn-new-pool" class="btn btn-primary" title="Generate a new sealed pool">New Pool</button>
     </div>
   </header>
+
+  <!-- Side Drawer (mobile strategy) -->
+  <div id="side-drawer-overlay" class="side-drawer-overlay hidden"></div>
+  <aside id="side-drawer" class="side-drawer">
+    <div class="side-drawer-header">
+      <h2>Strategy</h2>
+      <button id="btn-close-drawer" class="drawer-close-btn">&times;</button>
+    </div>
+    <div class="side-drawer-body">
+      <div id="drawer-college-rankings"></div>
+      <div id="drawer-synergy-list"></div>
+      <div id="drawer-build-suggestion"></div>
+    </div>
+  </aside>
+
+  <!-- Bottom Sheet (long-press card action) -->
+  <div id="bottom-sheet-overlay" class="bottom-sheet-overlay hidden"></div>
+  <div id="bottom-sheet" class="bottom-sheet">
+    <div class="bottom-sheet-handle"></div>
+    <div class="bottom-sheet-card-info">
+      <span id="bottom-sheet-card-name" class="bottom-sheet-card-name"></span>
+      <span id="bottom-sheet-card-rating" class="bottom-sheet-card-rating"></span>
+    </div>
+    <div class="bottom-sheet-actions">
+      <button id="bottom-sheet-add-deck" class="bottom-sheet-action-btn">
+        <span class="action-icon">+</span> Add to Deck
+      </button>
+      <button id="bottom-sheet-view-card" class="bottom-sheet-action-btn">
+        <span class="action-icon">&#x1F50D;</span> View Details
+      </button>
+    </div>
+  </div>
 
   <!-- Loading State -->
   <div id="loading" class="loading-screen">
@@ -84,10 +119,10 @@
     </aside>
   </main>
 
-  <!-- Strategy Panel -->
+  <!-- Strategy Panel (desktop only, mobile uses side drawer) -->
   <section id="strategy-panel" class="strategy-panel hidden">
     <h2>
-      <button class="strategy-toggle" id="btn-toggle-strategy">Strategy Analysis ▼</button>
+      <button class="strategy-toggle" id="btn-toggle-strategy">Strategy Analysis &#x25BC;</button>
     </h2>
     <div id="strategy-content" class="strategy-content">
       <div id="college-rankings" class="college-rankings"></div>
