@@ -144,7 +144,7 @@ function scoreCollegeMechanic(card) {
 /**
  * Convert numeric score to letter grade
  */
-function scoreToGrade(score) {
+export function scoreToGrade(score) {
   if (score >= 75) return 'A+';
   if (score >= 65) return 'A';
   if (score >= 58) return 'A-';
@@ -195,7 +195,9 @@ export function rateAllCards(cards) {
 
     const { score, grade, tags } = rateCard(card);
     card.rating_score = score;
+    card.rating_score_base = score;   // preserve for adjustment transparency
     card.rating = grade;
+    card.rating_computed = grade;     // preserve before any post-adjustments/overrides
     card.synergy_tags = tags;
   }
 }

@@ -80,6 +80,10 @@
   <nav id="toolbar" class="floating-toolbar hidden">
     <div class="floating-toolbar-inner">
       <div class="toolbar-section">
+        <button id="btn-browse" class="btn-browse" title="Browse all SOS cards">Browse</button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-section">
         <button class="sort-btn active" data-sort="color">Color</button>
         <button class="sort-btn" data-sort="cmc">CMC</button>
         <button class="sort-btn" data-sort="rarity">Rarity</button>
@@ -94,6 +98,13 @@
         <button class="filter-btn color-filter" data-color="R" title="Red"><span class="mana-symbol mana-r">R</span></button>
         <button class="filter-btn color-filter" data-color="G" title="Green"><span class="mana-symbol mana-g">G</span></button>
         <button class="filter-btn color-filter" data-color="C" title="Colorless"><span class="mana-symbol mana-c">C</span></button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-section">
+        <button class="filter-btn rarity-filter" data-rarity="mythic" title="Mythic Rare">M</button>
+        <button class="filter-btn rarity-filter" data-rarity="rare" title="Rare">R</button>
+        <button class="filter-btn rarity-filter" data-rarity="uncommon" title="Uncommon">U</button>
+        <button class="filter-btn rarity-filter" data-rarity="common" title="Common">C</button>
         <button class="filter-btn filter-clear" id="btn-clear-filters" title="Clear all filters">Clear</button>
       </div>
       <div class="toolbar-divider"></div>
@@ -106,6 +117,11 @@
       </div>
     </div>
   </nav>
+
+  <!-- Database Search Bar -->
+  <div id="db-search-container" class="db-search-container hidden">
+    <input type="search" id="db-search" class="db-search-input" placeholder="Search all 271 cards by name or text..." autocomplete="off">
+  </div>
 
   <!-- Main Content -->
   <main id="main-content" class="main-content hidden">

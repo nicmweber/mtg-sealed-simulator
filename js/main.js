@@ -1,11 +1,13 @@
 import { getCards } from './scryfall.js';
 import { rateAllCards } from './card-ratings.js';
+import { applyPrereleaseAdjustments, applyOverrides } from './rating-adjustments.js';
 import { generateSealedPool } from './pack-simulator.js';
 import { detectCollegeAffinity, findSynergies, suggestBuild } from './synergy.js';
-import { renderCardGrid, renderPackCards, showModal } from './card-display.js';
+import { renderCardTile, renderPackCards, showModal } from './card-display.js';
 import { sortCards, filterCards } from './sorter.js';
 import { DeckBuilder } from './deck-builder.js';
 import { COLORS, GRADE_COLORS } from './utils.js';
+import { findCardSynergies, bestArchetypeForCard, searchCards } from './card-database.js';
 
 // ===== App State =====
 let allCards = [];
@@ -13,7 +15,11 @@ let sealedPool = null;
 let currentPool = [];
 let currentSort = 'color';
 let activeColorFilters = new Set();
+let activeRarityFilter = null;
 let isDeckMode = false;
+let currentView = 'pool';  // 'pool' or 'database'
+let dbSearchQuery = '';
+let dbSearchDebounce = null;
 const deckBuilder = new DeckBuilder();
 
 // ===== Mobile Detection =====
@@ -33,6 +39,7 @@ const $strategyPanel = document.getElementById('strategy-panel');
 const $poolCount = document.getElementById('pool-count');
 const $btnNewPool = document.getElementById('btn-new-pool');
 const $btnToggleView = document.getElementById('btn-toggle-view');
+const $btnBrowse = document.getElementById('btn-browse');
 const $btnOpenAll = document.getElementById('btn-open-all');
 const $btnViewPool = document.getElementById('btn-view-pool');
 const $hamburger = document.getElementById('btn-hamburger');
@@ -40,12 +47,16 @@ const $sideDrawer = document.getElementById('side-drawer');
 const $sideDrawerOverlay = document.getElementById('side-drawer-overlay');
 const $bottomSheet = document.getElementById('bottom-sheet');
 const $bottomSheetOverlay = document.getElementById('bottom-sheet-overlay');
+const $dbSearchContainer = document.getElementById('db-search-container');
+const $dbSearchInput = document.getElementById('db-search');
 
 // ===== Initialize =====
 async function init() {
   try {
     allCards = await getCards();
     rateAllCards(allCards);
+    applyPrereleaseAdjustments(allCards);
+    applyOverrides(allCards);
     console.log(`Loaded and rated ${allCards.length} cards`);
 
     $loading.classList.add('hidden');
@@ -64,8 +75,8 @@ function startNewPool() {
   sealedPool = generateSealedPool(allCards);
   currentPool = [];
   isDeckMode = false;
+  currentView = 'pool';
 
-  // Reset UI
   $packOpening.classList.remove('hidden');
   $toolbar.classList.add('hidden');
   $mainContent.classList.add('hidden');
@@ -77,8 +88,8 @@ function startNewPool() {
   $btnViewPool.classList.add('hidden');
   $packReveal.innerHTML = '';
   $hamburger.classList.add('hidden');
+  hideSearchBar();
 
-  // Reset pack buttons
   document.querySelectorAll('.pack-btn').forEach(btn => {
     btn.disabled = false;
     btn.classList.remove('opened');
@@ -142,17 +153,52 @@ function openAllRemaining() {
 }
 
 function showPoolView() {
+  currentView = 'pool';
   $packOpening.classList.add('hidden');
   $toolbar.classList.remove('hidden');
   $mainContent.classList.remove('hidden');
   $strategyPanel.classList.remove('hidden');
   $hamburger.classList.remove('hidden');
+  $btnBrowse.classList.remove('hidden');
+  hideSearchBar();
 
   deckBuilder.init(currentPool);
   deckBuilder.onChange = () => updateDisplay();
 
   updateDisplay();
   renderStrategy();
+}
+
+function showDatabaseView() {
+  currentView = 'database';
+  // Hide pack opening, show main content with database
+  $packOpening.classList.add('hidden');
+  $toolbar.classList.remove('hidden');
+  $mainContent.classList.remove('hidden');
+  $strategyPanel.classList.add('hidden');
+  $hamburger.classList.add('hidden');
+  showSearchBar();
+
+  // Exit deck mode if active
+  if (isDeckMode) {
+    isDeckMode = false;
+    $btnToggleView.textContent = 'Deck Builder';
+    $btnToggleView.classList.remove('active');
+    $deckPanel.classList.add('hidden');
+    $mainContent.classList.remove('deck-mode');
+  }
+
+  updateDisplay();
+}
+
+function showSearchBar() {
+  if ($dbSearchContainer) $dbSearchContainer.classList.remove('hidden');
+}
+
+function hideSearchBar() {
+  if ($dbSearchContainer) $dbSearchContainer.classList.add('hidden');
+  dbSearchQuery = '';
+  if ($dbSearchInput) $dbSearchInput.value = '';
 }
 
 // ===== Synergy Highlighting =====
@@ -203,13 +249,20 @@ function openBottomSheet(card) {
   ratingBadge.textContent = card.rating;
   ratingBadge.style.backgroundColor = GRADE_COLORS[card.rating] || '#666';
 
-  // Update button text based on deck state
+  const inPool = currentView === 'pool';
   const inDeck = deckBuilder.deck.some(c => c.id === card.id);
   const addBtn = document.getElementById('bottom-sheet-add-deck');
-  if (inDeck) {
-    addBtn.innerHTML = '<span class="action-icon">&minus;</span> Remove from Deck';
+
+  if (!inPool) {
+    addBtn.innerHTML = '<span class="action-icon">+</span> Open a pool first';
+    addBtn.disabled = true;
   } else {
-    addBtn.innerHTML = '<span class="action-icon">+</span> Add to Deck';
+    addBtn.disabled = false;
+    if (inDeck) {
+      addBtn.innerHTML = '<span class="action-icon">\u2212</span> Remove from Deck';
+    } else {
+      addBtn.innerHTML = '<span class="action-icon">+</span> Add to Deck';
+    }
   }
 
   $bottomSheet.classList.add('open');
@@ -224,141 +277,63 @@ function closeBottomSheet() {
   bottomSheetCard = null;
 }
 
-// ===== Long Press Detection =====
-let longPressTimer = null;
-let longPressTriggered = false;
-
-function setupLongPress(el, card) {
-  const startPress = (e) => {
-    longPressTriggered = false;
-    el.classList.add('long-press-active');
-    longPressTimer = setTimeout(() => {
-      longPressTriggered = true;
-      el.classList.remove('long-press-active');
-      openBottomSheet(card);
-    }, 500);
-  };
-
-  const cancelPress = () => {
-    clearTimeout(longPressTimer);
-    el.classList.remove('long-press-active');
-  };
-
-  el.addEventListener('touchstart', startPress, { passive: true });
-  el.addEventListener('touchend', (e) => {
-    cancelPress();
-    if (longPressTriggered) {
-      e.preventDefault();
-    }
-  });
-  el.addEventListener('touchmove', cancelPress, { passive: true });
-  el.addEventListener('touchcancel', cancelPress);
-
-  // Store flag so click handler can check
-  el.addEventListener('click', (e) => {
-    if (longPressTriggered) {
-      e.preventDefault();
-      e.stopPropagation();
-      longPressTriggered = false;
-    }
-  }, true);
-}
-
 // ===== Display Updates =====
 function updateDisplay() {
   let displayCards;
 
-  if (isDeckMode) {
+  if (currentView === 'database') {
+    // Database view: use allCards with search + filters
+    displayCards = dbSearchQuery
+      ? searchCards(allCards, dbSearchQuery)
+      : [...allCards];
+  } else if (isDeckMode) {
     displayCards = deckBuilder.sideboard;
   } else {
     displayCards = currentPool;
   }
 
+  // Apply color filters
   if (activeColorFilters.size > 0) {
     displayCards = filterCards(displayCards, { colors: [...activeColorFilters] });
   }
 
+  // Apply rarity filter
+  if (activeRarityFilter) {
+    displayCards = filterCards(displayCards, { rarity: activeRarityFilter });
+  }
+
+  // Apply sort
   displayCards = sortCards(displayCards, currentSort);
 
   $poolCount.textContent = displayCards.length;
 
   const deckCardIds = new Set(deckBuilder.deck.map(c => c.id));
+  const inPoolContext = currentView === 'pool';
 
   $cardGrid.innerHTML = '';
   for (const card of displayCards) {
-    const inDeck = isDeckMode ? false : deckCardIds.has(card.id);
-    const el = document.createElement('div');
-    el.className = `card-wrapper ${card.rarity} ${inDeck ? 'in-deck' : ''}`;
-    el.dataset.cardId = card.id;
+    const inDeck = isDeckMode || currentView === 'database' ? false : deckCardIds.has(card.id);
 
-    const img = document.createElement('img');
-    img.src = card.image_front || '';
-    img.alt = card.name;
-    img.loading = 'lazy';
-    img.className = 'card-image';
-    img.onerror = () => {
-      img.src = 'data:image/svg+xml,' + encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="244" height="340" viewBox="0 0 244 340"><rect fill="#333" width="244" height="340" rx="12"/><text fill="#aaa" font-family="Arial" font-size="14" x="122" y="170" text-anchor="middle">${card.name}</text></svg>`
-      );
-    };
-    el.appendChild(img);
-
-    if (card.rating) {
-      const badge = document.createElement('span');
-      badge.className = 'rating-badge';
-      badge.textContent = card.rating;
-      badge.style.backgroundColor = GRADE_COLORS[card.rating] || '#666';
-      el.appendChild(badge);
-    }
-
-    if (card.foil) {
-      const foil = document.createElement('span');
-      foil.className = 'foil-badge';
-      foil.textContent = 'FOIL';
-      el.appendChild(foil);
-    }
-
-    if (card.isPromo) {
-      const promo = document.createElement('span');
-      promo.className = 'promo-badge';
-      promo.textContent = 'PROMO';
-      el.appendChild(promo);
-    }
-
-    if (card.image_back) {
-      const flipBtn = document.createElement('button');
-      flipBtn.className = 'flip-btn';
-      flipBtn.textContent = '\u{1F504}';
-      flipBtn.title = 'Flip card';
-      let showingFront = true;
-      flipBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showingFront = !showingFront;
-        img.src = showingFront ? card.image_front : card.image_back;
-      });
-      el.appendChild(flipBtn);
-    }
-
-    // Mobile: long-press for bottom sheet
-    if (isMobile()) {
-      setupLongPress(el, card);
-    }
-
-    // Click handler
-    el.style.cursor = 'pointer';
-    el.addEventListener('click', () => {
-      if (longPressTriggered) return;
-      if (isDeckMode) {
-        deckBuilder.addToDeck(card.id);
-      } else {
-        showCardModal(card);
+    const tile = renderCardTile(card, {
+      inDeck,
+      onClick: (c) => {
+        if (isDeckMode && currentView === 'pool') {
+          deckBuilder.addToDeck(c.id);
+        } else {
+          openCardModal(c);
+        }
+      },
+      onLongPress: isMobile() && currentView === 'pool' ? (c) => openBottomSheet(c) : null,
+      onRatingCycle: (c) => {
+        // Re-render card to reflect new rating
+        // Since we only changed rating display, no need for full refresh
       }
     });
 
-    $cardGrid.appendChild(el);
+    $cardGrid.appendChild(tile);
   }
 
-  if (isDeckMode) {
+  if (isDeckMode && currentView === 'pool') {
     const $deckStats = document.getElementById('deck-stats');
     const $deckList = document.getElementById('deck-list');
     deckBuilder.renderStats($deckStats);
@@ -366,11 +341,18 @@ function updateDisplay() {
   }
 }
 
-// ===== Card Modal with Add to Deck =====
-function showCardModal(card) {
-  showModal(card);
+// ===== Card Modal =====
+function openCardModal(card) {
+  const inPool = currentView === 'pool';
 
-  // Inject the Add to Deck button after modal is in DOM
+  showModal(card, {
+    allCards,
+    inPool,
+    deckBuilder,
+    onCardChange: () => updateDisplay()
+  });
+
+  // Inject the synergy/archetype sections + Add to Deck button
   setTimeout(() => {
     const modal = document.getElementById('card-modal');
     if (!modal) return;
@@ -378,16 +360,77 @@ function showCardModal(card) {
     const infoSection = modal.querySelector('.modal-info-section');
     if (!infoSection) return;
 
+    // Best Archetype section
+    const archetypeContainer = modal.querySelector('#modal-archetype-section');
+    if (archetypeContainer) {
+      const archetype = bestArchetypeForCard(card);
+      archetypeContainer.innerHTML = `
+        <div class="modal-archetype">
+          <h3>Best Archetype</h3>
+          <div class="archetype-card">
+            <div class="archetype-name">${archetype.name}</div>
+            ${archetype.colors.map(c => `<span class="mana-symbol mana-${c.toLowerCase()}">${c}</span>`).join(' ')}
+            <div class="archetype-reason">${archetype.reason}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Synergies section
+    const synergiesContainer = modal.querySelector('#modal-synergies-section');
+    if (synergiesContainer) {
+      const synergies = findCardSynergies(card, allCards);
+      if (synergies.length > 0) {
+        synergiesContainer.innerHTML = `
+          <div class="modal-synergies">
+            <h3>Synergizes With</h3>
+            <div class="synergy-card-grid">
+              ${synergies.map(s => `
+                <div class="synergy-mini-card" data-card-id="${s.card.id}">
+                  <img src="${s.card.image_front || ''}" alt="${s.card.name}" loading="lazy">
+                  <div class="synergy-mini-info">
+                    <div class="synergy-mini-name">${s.card.name}</div>
+                    <div class="synergy-mini-reason">${s.reasons.join(', ')}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+
+        // Wire clicks on synergy mini-cards
+        synergiesContainer.querySelectorAll('.synergy-mini-card').forEach(el => {
+          el.addEventListener('click', () => {
+            const cardId = el.dataset.cardId;
+            const targetCard = allCards.find(c => c.id === cardId);
+            if (targetCard) {
+              modal.remove();
+              openCardModal(targetCard);
+            }
+          });
+        });
+      }
+    }
+
+    // Add to Deck button
     const inDeck = deckBuilder.deck.some(c => c.id === card.id);
     const btn = document.createElement('button');
-    btn.className = `modal-deck-btn ${inDeck ? 'in-deck' : ''}`;
-    btn.textContent = inDeck ? 'Remove from Deck' : 'Add to Deck';
-    btn.addEventListener('click', () => {
-      deckBuilder.toggleCard(card.id);
-      const nowInDeck = deckBuilder.deck.some(c => c.id === card.id);
-      btn.textContent = nowInDeck ? 'Remove from Deck' : 'Add to Deck';
-      btn.classList.toggle('in-deck', nowInDeck);
-    });
+
+    if (!inPool) {
+      btn.className = 'modal-deck-btn disabled';
+      btn.textContent = 'Open a pool to build a deck';
+      btn.disabled = true;
+    } else {
+      btn.className = `modal-deck-btn ${inDeck ? 'in-deck' : ''}`;
+      btn.textContent = inDeck ? 'Remove from Deck' : 'Add to Deck';
+      btn.addEventListener('click', () => {
+        deckBuilder.toggleCard(card.id);
+        const nowInDeck = deckBuilder.deck.some(c => c.id === card.id);
+        btn.textContent = nowInDeck ? 'Remove from Deck' : 'Add to Deck';
+        btn.classList.toggle('in-deck', nowInDeck);
+      });
+    }
+
     infoSection.appendChild(btn);
   }, 0);
 }
@@ -415,7 +458,7 @@ function renderStrategy() {
   const synergyHTML = synergies.length > 0 ? `
     <h3>Detected Synergies</h3>
     ${synergies.map(s => `
-      <div class="synergy-item synergy-clickable" data-synergy-cards="${btoa(JSON.stringify(s.cards))}">
+      <div class="synergy-item synergy-clickable" data-synergy-cards="${btoa(unescape(encodeURIComponent(JSON.stringify(s.cards))))}">
         <div class="synergy-item-name">
           ${s.name}
           <span class="synergy-strength">
@@ -441,7 +484,7 @@ function renderStrategy() {
       </div>
     ` : ''}
     <div class="build-detail"><strong>Removal:</strong> ${suggestion.removalCount} spell(s)
-      — ${suggestion.removalCount >= 5 ? 'Excellent!' : suggestion.removalCount >= 3 ? 'Solid' : 'Light, prioritize finding more'}
+      \u2014 ${suggestion.removalCount >= 5 ? 'Excellent!' : suggestion.removalCount >= 3 ? 'Solid' : 'Light, prioritize finding more'}
     </div>
     <div class="build-detail"><strong>Suggested Mana:</strong> ${suggestion.manaBase}</div>
     ${suggestion.bombs.length > 0 ? `
@@ -452,17 +495,14 @@ function renderStrategy() {
     ` : ''}
   `;
 
-  // Desktop: render into strategy panel
   document.getElementById('college-rankings').innerHTML = collegeHTML;
   document.getElementById('synergy-list').innerHTML = synergyHTML;
   document.getElementById('build-suggestion').innerHTML = `<div class="build-suggestion">${suggestionHTML}</div>`;
 
-  // Mobile: render into side drawer
   document.getElementById('drawer-college-rankings').innerHTML = `<div class="college-rankings">${collegeHTML}</div>`;
   document.getElementById('drawer-synergy-list').innerHTML = `<div class="synergy-list">${synergyHTML}</div>`;
   document.getElementById('drawer-build-suggestion').innerHTML = `<div class="build-suggestion">${suggestionHTML}</div>`;
 
-  // Wire synergy click handlers on both desktop and drawer
   wireSynergyClicks(document.getElementById('synergy-list'));
   wireSynergyClicks(document.getElementById('drawer-synergy-list'));
 }
@@ -471,15 +511,13 @@ function wireSynergyClicks(container) {
   container.querySelectorAll('.synergy-clickable').forEach(el => {
     el.addEventListener('click', () => {
       const isActive = el.classList.contains('synergy-active');
-      // Clear all synergy-active across both desktop and drawer
       document.querySelectorAll('.synergy-active').forEach(s => s.classList.remove('synergy-active'));
       clearSynergyHighlight();
 
       if (!isActive) {
         el.classList.add('synergy-active');
-        const cardNames = JSON.parse(atob(el.dataset.synergyCards));
+        const cardNames = JSON.parse(decodeURIComponent(escape(atob(el.dataset.synergyCards))));
         highlightSynergyCards(cardNames);
-        // On mobile, close drawer after selecting synergy
         if (isMobile()) {
           closeSideDrawer();
         }
@@ -501,8 +539,11 @@ document.querySelectorAll('.pack-btn').forEach(btn => {
 $btnOpenAll.addEventListener('click', openAllRemaining);
 $btnViewPool.addEventListener('click', showPoolView);
 
-// Toggle deck builder
 $btnToggleView.addEventListener('click', () => {
+  if (currentView === 'database') {
+    showPoolView();
+    return;
+  }
   isDeckMode = !isDeckMode;
   $btnToggleView.textContent = isDeckMode ? 'Pool View' : 'Deck Builder';
   $btnToggleView.classList.toggle('active', isDeckMode);
@@ -517,6 +558,28 @@ $btnToggleView.addEventListener('click', () => {
 
   updateDisplay();
 });
+
+// Browse (database) button
+$btnBrowse.addEventListener('click', () => {
+  if (currentView === 'database') {
+    showPoolView();
+    $btnBrowse.classList.remove('active');
+  } else {
+    showDatabaseView();
+    $btnBrowse.classList.add('active');
+  }
+});
+
+// Search input
+if ($dbSearchInput) {
+  $dbSearchInput.addEventListener('input', (e) => {
+    clearTimeout(dbSearchDebounce);
+    dbSearchDebounce = setTimeout(() => {
+      dbSearchQuery = e.target.value.trim();
+      updateDisplay();
+    }, 150);
+  });
+}
 
 // Sort buttons
 document.querySelectorAll('.sort-btn').forEach(btn => {
@@ -543,10 +606,27 @@ document.querySelectorAll('.color-filter').forEach(btn => {
   });
 });
 
+// Rarity filter buttons
+document.querySelectorAll('.rarity-filter').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const rarity = btn.dataset.rarity;
+    if (activeRarityFilter === rarity) {
+      activeRarityFilter = null;
+      btn.classList.remove('active');
+    } else {
+      document.querySelectorAll('.rarity-filter').forEach(b => b.classList.remove('active'));
+      activeRarityFilter = rarity;
+      btn.classList.add('active');
+    }
+    updateDisplay();
+  });
+});
+
 // Clear filters
 document.getElementById('btn-clear-filters').addEventListener('click', () => {
   activeColorFilters.clear();
-  document.querySelectorAll('.color-filter').forEach(b => b.classList.remove('active'));
+  activeRarityFilter = null;
+  document.querySelectorAll('.color-filter, .rarity-filter').forEach(b => b.classList.remove('active'));
   updateDisplay();
 });
 
@@ -578,7 +658,7 @@ $sideDrawerOverlay.addEventListener('click', closeSideDrawer);
 // Bottom sheet
 $bottomSheetOverlay.addEventListener('click', closeBottomSheet);
 document.getElementById('bottom-sheet-add-deck').addEventListener('click', () => {
-  if (bottomSheetCard) {
+  if (bottomSheetCard && currentView === 'pool') {
     deckBuilder.toggleCard(bottomSheetCard.id);
     closeBottomSheet();
   }
@@ -587,11 +667,11 @@ document.getElementById('bottom-sheet-view-card').addEventListener('click', () =
   if (bottomSheetCard) {
     const card = bottomSheetCard;
     closeBottomSheet();
-    showCardModal(card);
+    openCardModal(card);
   }
 });
 
-// Keyboard: Escape closes modal, drawer, bottom sheet
+// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     const modal = document.getElementById('card-modal');
@@ -601,5 +681,5 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ===== Start the app =====
+// Start
 document.addEventListener('DOMContentLoaded', init);

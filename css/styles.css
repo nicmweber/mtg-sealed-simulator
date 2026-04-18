@@ -286,6 +286,92 @@ body {
   color: white;
 }
 
+.btn-browse {
+  padding: 5px 14px;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gold);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-browse:hover {
+  background: var(--gold);
+  color: #111;
+}
+
+.btn-browse.active {
+  background: var(--gold);
+  color: #111;
+}
+
+/* ===== Database Search Bar ===== */
+.db-search-container {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  padding: 10px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.db-search-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 0.95rem;
+  transition: border-color 0.15s;
+}
+
+.db-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(110, 64, 201, 0.2);
+}
+
+.db-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ===== Rarity Filter Buttons ===== */
+.rarity-filter {
+  min-width: 26px;
+  padding: 4px 8px;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.rarity-filter[data-rarity="mythic"].active {
+  background: rgba(211, 84, 0, 0.25);
+  border-color: var(--mythic-orange);
+  color: var(--mythic-orange);
+}
+
+.rarity-filter[data-rarity="rare"].active {
+  background: rgba(201, 168, 60, 0.25);
+  border-color: var(--rare-gold);
+  color: var(--rare-gold);
+}
+
+.rarity-filter[data-rarity="uncommon"].active {
+  background: rgba(168, 181, 192, 0.25);
+  border-color: var(--uncommon-silver);
+  color: var(--uncommon-silver);
+}
+
+.rarity-filter[data-rarity="common"].active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--text);
+  color: var(--text);
+}
+
 /* ===== Mana Symbols ===== */
 .mana-symbol {
   display: inline-flex;
@@ -392,17 +478,41 @@ body {
   position: absolute;
   top: 6px;
   right: 6px;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: white;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: transform 0.1s;
+}
+
+.rating-badge:active {
+  transform: scale(0.92);
+}
+
+.rating-badge.user-override {
+  border-color: #fff;
+  border-style: dashed;
+}
+
+.rating-badge.user-override::after {
+  content: '*';
+  position: absolute;
+  bottom: -4px;
+  right: -2px;
+  font-size: 0.8rem;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
 /* ===== Foil / Promo Badges ===== */
@@ -1197,7 +1307,7 @@ body {
   transition: background 0.15s;
 }
 
-.modal-deck-btn:hover {
+.modal-deck-btn:hover:not(:disabled) {
   background: var(--accent-hover);
 }
 
@@ -1205,6 +1315,175 @@ body {
   background: var(--bg);
   color: var(--text-muted);
   border: 1px solid var(--border);
+}
+
+.modal-deck-btn.disabled,
+.modal-deck-btn:disabled {
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ===== Rating Breakdown ===== */
+.modal-rating-breakdown {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.modal-rating-breakdown .breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.modal-rating-breakdown .bd-label {
+  color: var(--text-muted);
+  min-width: 90px;
+}
+
+.modal-rating-breakdown .bd-value {
+  font-weight: 600;
+}
+
+.modal-rating-breakdown .breakdown-reasons {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-left: 98px;
+  margin-bottom: 4px;
+  font-style: italic;
+}
+
+.bd-reset-btn {
+  margin-left: auto;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.bd-reset-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.modal-rating-badge.user-override {
+  border: 2px dashed white;
+  position: relative;
+}
+
+/* ===== Modal: Best Archetype Section ===== */
+.modal-archetype {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-archetype h3 {
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.archetype-card {
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.archetype-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.archetype-reason {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* ===== Modal: Synergies Section ===== */
+.modal-synergies {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-synergies h3 {
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.synergy-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.synergy-mini-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+}
+
+.synergy-mini-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.synergy-mini-card img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.synergy-mini-info {
+  padding: 6px 8px;
+}
+
+.synergy-mini-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-bottom: 2px;
+}
+
+.synergy-mini-reason {
+  font-size: 0.68rem;
+  color: var(--accent);
+  font-style: italic;
 }
 
 /* ===== Utility ===== */
