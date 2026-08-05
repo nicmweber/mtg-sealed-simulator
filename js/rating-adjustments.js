@@ -1,16 +1,11 @@
 import { scoreToGrade } from './card-ratings.js';
 import { isCreature, getCardColleges } from './utils.js';
+import { SET_CONFIG, OVERRIDES_KEY } from './set-config.js';
 
-const OVERRIDES_KEY = 'mtg-sos-rating-overrides';
-
-// Prerelease tier bonuses based on Reddit megathread player feedback
-const TIER_BONUS = {
-  lorehold: 4,      // Tier 1 — aggressive, fast
-  silverquill: 4,   // Tier 1 — cohesive, fast
-  prismari: 0,      // Tier 2 — situational
-  witherbloom: 0,   // Tier 2 — grindy, needs support
-  quandrix: -4      // Tier 3 — underperformed
-};
+// Archetype tier bonuses come from the set config. For The Hobbit these start
+// at 0 (no prerelease data exists yet) — tune them there once reports come in,
+// or use tap-to-cycle overrides on individual cards at the event.
+const TIER_BONUS = SET_CONFIG.tierBonus;
 
 export const GRADE_CYCLE = [
   'A+', 'A', 'A-',

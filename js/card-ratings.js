@@ -1,4 +1,4 @@
-import { isCreature, isSpell } from './utils.js';
+import { isCreature, isSpell, COLLEGES } from './utils.js';
 
 // Expected vanilla stats (power + toughness) at each CMC
 const VANILLA_STATS = { 0: 1, 1: 2, 2: 4, 3: 5, 4: 7, 5: 8, 6: 10, 7: 11, 8: 12 };
@@ -43,8 +43,15 @@ const TEXT_PATTERNS = [
   { pattern: /whenever .* dies/i, score: 4, tag: 'death-trigger' },
   { pattern: /whenever you cast/i, score: 4, tag: 'cast-trigger' },
   { pattern: /sacrifice/i, score: 2, tag: 'sacrifice' },
-  { pattern: /equipped creature gets/i, score: 3, tag: 'equipment' },
-  { pattern: /transform|prepare/i, score: 3, tag: 'transform' },
+  { pattern: /equipped creature gets|hone counter/i, score: 3, tag: 'equipment' },
+  // The Hobbit set mechanics
+  { pattern: /amass/i, score: 6, tag: 'amass' },
+  { pattern: /landfall/i, score: 5, tag: 'landfall' },
+  { pattern: /ferocious/i, score: 4, tag: 'ferocious' },
+  { pattern: /storied|enduring story/i, score: 4, tag: 'storied' },
+  { pattern: /\brecruits?\b/i, score: 5, tag: 'recruit' },
+  { pattern: /treasure token|create .* treasure/i, score: 4, tag: 'treasure' },
+  { pattern: /play an additional land|put a land .* onto the battlefield/i, score: 4, tag: 'ramp' },
   { pattern: /all creatures get|creatures you control get/i, score: 6, tag: 'anthem' },
   { pattern: /destroy all|exile all/i, score: 12, tag: 'board-wipe' },
   { pattern: /fight/i, score: 5, tag: 'fight' }
@@ -128,13 +135,15 @@ function scoreCurve(card) {
 }
 
 /**
- * Score college mechanic bonus (0-10)
+ * Score set-mechanic bonus (0-10) — driven by the active set's archetype config.
+ * Checks keywords AND oracle text (new mechanics are missing from Scryfall keywords).
  */
 function scoreCollegeMechanic(card) {
-  const mechanics = ['Repartee', 'Flashback', 'Opus', 'Increment', 'Infusion', 'Prepared'];
   let bonus = 0;
-  for (const kw of (card.keywords || [])) {
-    if (mechanics.includes(kw)) {
+  const text = card.oracle_text || '';
+  for (const arch of Object.values(COLLEGES)) {
+    if (card.keywords?.includes(arch.mechanic) ||
+        (arch.mechanicPattern && arch.mechanicPattern.test(text))) {
       bonus += 5;
     }
   }

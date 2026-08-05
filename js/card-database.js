@@ -3,20 +3,28 @@ import { COLLEGES, isCreature, isSpell } from './utils.js';
 // Tag-pair synergy table: when target has tag A, partners with tag B synergize
 const TAG_SYNERGIES = {
   'death-trigger': ['sacrifice', 'tokens'],
-  'sacrifice': ['death-trigger', 'etb', 'tokens'],
-  'tokens': ['anthem', 'sacrifice'],
+  'sacrifice': ['death-trigger', 'etb', 'tokens', 'treasure', 'amass'],
+  'tokens': ['anthem', 'sacrifice', 'recruit'],
   'etb': ['bounce', 'tokens'],
   'bounce': ['etb', 'cast-trigger'],
   'cast-trigger': ['bounce'],
   'lifegain': ['lifegain'],
-  'counters': ['counters'],
+  'counters': ['counters', 'amass', 'ferocious'],
   'card-draw': ['cast-trigger'],
-  'equipment': ['evasion'],
-  'combat-trick': ['evasion', 'fight'],
+  'equipment': ['evasion', 'equipment', 'storied'],
+  'combat-trick': ['evasion', 'fight', 'ferocious'],
   'removal': [],     // removal is always welcome, but doesn't pair with specific tags
-  'anthem': ['tokens'],
+  'anthem': ['tokens', 'recruit', 'amass'],
   'fight': ['combat-trick'],
-  'tutor': ['card-draw']
+  'tutor': ['card-draw'],
+  // The Hobbit mechanics
+  'amass': ['amass', 'sacrifice', 'counters', 'anthem'],
+  'landfall': ['landfall', 'ramp'],
+  'ramp': ['landfall'],
+  'ferocious': ['counters', 'combat-trick', 'ferocious'],
+  'recruit': ['tokens', 'anthem', 'recruit'],
+  'storied': ['equipment', 'storied'],
+  'treasure': ['sacrifice', 'treasure']
 };
 
 // Friendly reason labels for each tag
@@ -35,16 +43,23 @@ const TAG_REASONS = {
   'removal': 'Removal',
   'anthem': 'Anthem',
   'fight': 'Fight effect',
-  'tutor': 'Tutor'
+  'tutor': 'Tutor',
+  'amass': 'Amass Army synergy',
+  'landfall': 'Landfall payoff',
+  'ramp': 'Extra lands / ramp',
+  'ferocious': 'Ferocious enabler/payoff',
+  'recruit': 'Recruit synergy',
+  'storied': 'Storied enabler',
+  'treasure': 'Treasure synergy'
 };
 
-// College → archetype theme tags
+// Archetype → theme tags (The Hobbit factions)
 const COLLEGE_TAG_AFFINITY = {
-  silverquill: ['tokens', 'anthem', 'evasion', 'combat-trick'],
-  lorehold: ['tokens', 'anthem', 'death-trigger', 'card-draw'],
-  prismari: ['cast-trigger', 'card-draw', 'bounce', 'counterspell'],
-  quandrix: ['counters', 'card-draw', 'tokens'],
-  witherbloom: ['death-trigger', 'sacrifice', 'lifegain', 'card-draw']
+  laketown: ['tokens', 'anthem', 'recruit', 'card-draw'],
+  ironhills: ['equipment', 'storied', 'counters', 'combat-trick'],
+  goblintown: ['amass', 'sacrifice', 'tokens', 'treasure', 'death-trigger'],
+  mirkwood: ['ferocious', 'sacrifice', 'death-trigger', 'counters'],
+  elvenking: ['landfall', 'ramp', 'card-draw', 'counters']
 };
 
 /**
@@ -115,6 +130,22 @@ export function findCardSynergies(targetCard, allCards) {
     if (/\+1\/\+1 counter/i.test(text) && partner.synergy_tags?.includes('counters')) {
       score += 4;
       reasons.add('+1/+1 counter synergy');
+    }
+    // The Hobbit bridges
+    if (/storied|enduring story/i.test(text)) {
+      const pt = partner.type_line || '';
+      if (pt.includes('Equipment') || pt.includes('Legendary') || pt.includes('Saga')) {
+        score += 5;
+        reasons.add('Counts toward your story');
+      }
+    }
+    if (/ferocious/i.test(text) && (parseInt(partner.power) || 0) >= 4) {
+      score += 5;
+      reasons.add('Power 4+ turns on Ferocious');
+    }
+    if (/landfall/i.test(text) && partner.synergy_tags?.includes('ramp')) {
+      score += 5;
+      reasons.add('Extra land drops fuel Landfall');
     }
 
     // Color compatibility

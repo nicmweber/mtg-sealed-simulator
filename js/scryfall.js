@@ -1,7 +1,6 @@
-const CACHE_KEY = 'sos_cards';
-const CACHE_TIMESTAMP_KEY = 'sos_cards_timestamp';
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-const SEARCH_URL = 'https://api.scryfall.com/cards/search?q=set:sos';
+import { SET_CONFIG, CACHE_KEY, CACHE_TIMESTAMP_KEY, SEARCH_URL } from './set-config.js';
+
+const CACHE_TTL = SET_CONFIG.cacheTtlHours * 60 * 60 * 1000;
 
 /**
  * Trim a Scryfall card object to essential fields
@@ -79,7 +78,7 @@ function trimCard(card) {
 }
 
 /**
- * Fetch all cards from Scryfall for the SOS set
+ * Fetch all cards from Scryfall for the configured set
  */
 async function fetchFromAPI() {
   const allCards = [];
@@ -106,7 +105,7 @@ async function fetchFromAPI() {
 }
 
 /**
- * Get all SOS cards, using cache if available
+ * Get all cards for the configured set, using cache if available
  */
 export async function getCards() {
   // Check cache

@@ -1,46 +1,8 @@
-// College definitions for Secrets of Strixhaven
-export const COLLEGES = {
-  silverquill: {
-    name: 'Silverquill',
-    colors: ['W', 'B'],
-    mechanic: 'Repartee',
-    themes: ['aggro', 'tempo', 'evasion', 'flying'],
-    icon: 'WB',
-    description: 'White/Black — Tempo and evasion with Repartee'
-  },
-  lorehold: {
-    name: 'Lorehold',
-    colors: ['R', 'W'],
-    mechanic: 'Flashback',
-    themes: ['graveyard', 'value', 'go-wide', 'tokens'],
-    icon: 'RW',
-    description: 'Red/White — Graveyard value with Flashback'
-  },
-  prismari: {
-    name: 'Prismari',
-    colors: ['U', 'R'],
-    mechanic: 'Opus',
-    themes: ['spells-matter', 'big-mana', 'copying', 'instants', 'sorceries'],
-    icon: 'UR',
-    description: 'Blue/Red — Spells-matter with Opus'
-  },
-  quandrix: {
-    name: 'Quandrix',
-    colors: ['G', 'U'],
-    mechanic: 'Increment',
-    themes: ['counters', 'ramp', 'card-draw', '+1/+1'],
-    icon: 'GU',
-    description: 'Green/Blue — Counters and growth with Increment'
-  },
-  witherbloom: {
-    name: 'Witherbloom',
-    colors: ['B', 'G'],
-    mechanic: 'Infusion',
-    themes: ['lifegain', 'sacrifice', 'graveyard', 'death-triggers'],
-    icon: 'BG',
-    description: 'Black/Green — Life manipulation with Infusion'
-  }
-};
+import { SET_CONFIG } from './set-config.js';
+
+// Archetype definitions come from the active set configuration.
+// (Historic name COLLEGES kept so downstream consumers don't all need renaming.)
+export const COLLEGES = SET_CONFIG.archetypes;
 
 // MTG color definitions
 export const COLORS = {
@@ -133,9 +95,12 @@ export function getCardColleges(card) {
       colleges.push(key);
     }
 
-    // Also check if the card has the college's mechanic keyword
-    if (card.keywords?.includes(college.mechanic)) {
-      if (!colleges.includes(key)) colleges.push(key);
+    // Also check the archetype's mechanic — by keyword, or by oracle text for
+    // brand-new mechanics Scryfall doesn't list in `keywords` (Storied, recruit)
+    const hasMechanic = card.keywords?.includes(college.mechanic) ||
+      (college.mechanicPattern && college.mechanicPattern.test(card.oracle_text || ''));
+    if (hasMechanic && !colleges.includes(key)) {
+      colleges.push(key);
     }
   }
   return colleges;

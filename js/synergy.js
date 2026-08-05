@@ -94,8 +94,80 @@ export function findSynergies(pool) {
   const deathTriggerCards = pool.filter(c => c.synergy_tags?.includes('death-trigger'));
   const sacrificeCards = pool.filter(c => c.synergy_tags?.includes('sacrifice'));
   const etbCards = pool.filter(c => c.synergy_tags?.includes('etb'));
+  const amassCards = pool.filter(c => c.synergy_tags?.includes('amass'));
+  const landfallCards = pool.filter(c => c.synergy_tags?.includes('landfall'));
+  const ferociousCards = pool.filter(c => c.synergy_tags?.includes('ferocious'));
+  const recruitCards = pool.filter(c => c.synergy_tags?.includes('recruit'));
+  const storiedCards = pool.filter(c => c.synergy_tags?.includes('storied'));
+  const equipmentCards = pool.filter(c =>
+    c.synergy_tags?.includes('equipment') || (c.type_line || '').includes('Equipment')
+  );
+  const rampCards = pool.filter(c => c.synergy_tags?.includes('ramp'));
+  const treasureCards = pool.filter(c => c.synergy_tags?.includes('treasure'));
   const flashbackCards = pool.filter(c => c.keywords?.includes('Flashback'));
-  const prepareCards = pool.filter(c => c.layout === 'prepare');
+
+  // Amass Goblins (Goblin-town)
+  if (amassCards.length >= 3) {
+    synergies.push({
+      name: 'Amass Goblins (Goblin-town)',
+      description: `${amassCards.length} Amass cards stacking one growing Goblin Army`,
+      cards: amassCards.map(c => c.name),
+      strength: Math.min(10, amassCards.length * 2)
+    });
+  }
+
+  // Equipment / Storied (Iron Hills)
+  if (equipmentCards.length >= 3 || (equipmentCards.length >= 2 && storiedCards.length >= 2)) {
+    synergies.push({
+      name: 'Equipment & Storied (Iron Hills)',
+      description: `${equipmentCards.length} Equipment/hone cards${storiedCards.length > 0 ? ` + ${storiedCards.length} Storied payoff(s) (artifacts count toward your story)` : ''}`,
+      cards: [...equipmentCards.map(c => c.name), ...storiedCards.map(c => c.name)],
+      strength: Math.min(10, equipmentCards.length * 2 + storiedCards.length * 2)
+    });
+  }
+
+  // Landfall (Elvenking's Halls)
+  if (landfallCards.length >= 3) {
+    synergies.push({
+      name: "Landfall (Elvenking's Halls)",
+      description: `${landfallCards.length} Landfall payoffs${rampCards.length > 0 ? ` + ${rampCards.length} extra-land enabler(s)` : ''}`,
+      cards: [...landfallCards.map(c => c.name), ...rampCards.map(c => c.name)],
+      strength: Math.min(10, landfallCards.length * 2 + rampCards.length * 2)
+    });
+  }
+
+  // Ferocious (Mirkwood)
+  if (ferociousCards.length >= 2) {
+    const bigCreatures = pool.filter(c =>
+      isCreature(c) && (parseInt(c.power) || 0) >= 4
+    );
+    synergies.push({
+      name: 'Ferocious (Mirkwood)',
+      description: `${ferociousCards.length} Ferocious payoffs with ${bigCreatures.length} power-4+ creature(s) to turn them on`,
+      cards: [...ferociousCards.map(c => c.name), ...bigCreatures.slice(0, 4).map(c => c.name)],
+      strength: Math.min(10, ferociousCards.length * 2 + Math.min(bigCreatures.length, 5))
+    });
+  }
+
+  // Recruit (Lake-town)
+  if (recruitCards.length >= 3) {
+    synergies.push({
+      name: 'Recruit (Lake-town)',
+      description: `${recruitCards.length} Recruit cards — card selection plus a Soldier token army`,
+      cards: recruitCards.map(c => c.name),
+      strength: Math.min(10, recruitCards.length * 2)
+    });
+  }
+
+  // Treasure sub-theme
+  if (treasureCards.length >= 3) {
+    synergies.push({
+      name: 'Treasure',
+      description: `${treasureCards.length} Treasure makers — ramp, fixing, and sacrifice fodder`,
+      cards: treasureCards.map(c => c.name),
+      strength: Math.min(10, treasureCards.length * 2)
+    });
+  }
 
   // Spells-matter synergy
   if (spells.length >= 6) {
@@ -104,7 +176,7 @@ export function findSynergies(pool) {
     );
     if (spellsPayoffs.length >= 1) {
       synergies.push({
-        name: 'Spells Matter (Prismari)',
+        name: 'Spells Matter',
         description: `${spells.length} instants/sorceries with ${spellsPayoffs.length} payoff(s)`,
         cards: [...spellsPayoffs.map(c => c.name), ...spells.slice(0, 3).map(c => c.name)],
         strength: Math.min(10, spells.length + spellsPayoffs.length * 2)
@@ -115,7 +187,7 @@ export function findSynergies(pool) {
   // +1/+1 counters matter
   if (counterCards.length >= 3) {
     synergies.push({
-      name: 'Counters Matter (Quandrix)',
+      name: 'Counters Matter',
       description: `${counterCards.length} cards that use +1/+1 counters`,
       cards: counterCards.map(c => c.name),
       strength: Math.min(10, counterCards.length * 2)
@@ -139,7 +211,7 @@ export function findSynergies(pool) {
       (c.oracle_text || '').match(/from your graveyard|mill|graveyard/i)
     );
     synergies.push({
-      name: 'Graveyard Value (Lorehold)',
+      name: 'Graveyard Value',
       description: `${flashbackCards.length} flashback cards${graveyardCards.length > 0 ? ` + ${graveyardCards.length} graveyard enabler(s)` : ''}`,
       cards: [...flashbackCards.map(c => c.name), ...graveyardCards.slice(0, 3).map(c => c.name)],
       strength: Math.min(10, flashbackCards.length * 2 + graveyardCards.length)
@@ -149,7 +221,7 @@ export function findSynergies(pool) {
   // Death triggers + sacrifice
   if (deathTriggerCards.length >= 2 && sacrificeCards.length >= 1) {
     synergies.push({
-      name: 'Sacrifice / Death Triggers (Witherbloom)',
+      name: 'Sacrifice / Death Triggers',
       description: `${deathTriggerCards.length} death triggers + ${sacrificeCards.length} sacrifice outlets`,
       cards: [...deathTriggerCards.map(c => c.name), ...sacrificeCards.map(c => c.name)],
       strength: Math.min(10, (deathTriggerCards.length + sacrificeCards.length) * 2)
@@ -180,13 +252,14 @@ export function findSynergies(pool) {
     });
   }
 
-  // Prepare / DFC value
-  if (prepareCards.length >= 3) {
+  // Adventure flexibility (two spells in one card)
+  const adventureCards = pool.filter(c => c.layout === 'adventure');
+  if (adventureCards.length >= 3) {
     synergies.push({
-      name: 'Prepare Flexibility',
-      description: `${prepareCards.length} double-faced prepare cards offer modal flexibility`,
-      cards: prepareCards.map(c => c.name),
-      strength: Math.min(10, prepareCards.length * 2)
+      name: 'Adventure Flexibility',
+      description: `${adventureCards.length} adventure cards give two spells in one — great for sealed consistency`,
+      cards: adventureCards.map(c => c.name),
+      strength: Math.min(10, adventureCards.length * 2)
     });
   }
 
