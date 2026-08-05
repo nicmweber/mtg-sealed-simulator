@@ -32,8 +32,8 @@ export const GRADE_COLORS = {
   'F': '#B71C1C'
 };
 
-// Mana symbol regex patterns
-const MANA_SYMBOL_RE = /\{([WUBRGCX0-9]+)\}/g;
+// Mana symbol regex patterns (includes hybrid symbols like {W/U})
+const MANA_SYMBOL_RE = /\{([WUBRGCX0-9/]+)\}/g;
 
 /**
  * Parse mana cost string into array of symbols
@@ -139,4 +139,87 @@ export function pickRandom(arr, n, exclude = new Set()) {
   const available = arr.filter(item => !exclude.has(item.name));
   shuffle(available);
   return available.slice(0, n);
+}
+
+// Basic land name per color
+export const LAND_NAMES = { W: 'Plains', U: 'Island', B: 'Swamp', R: 'Mountain', G: 'Forest' };
+
+/**
+ * Count colored mana pips across a list of cards.
+ * Hybrid symbols like {W/U} contribute 0.5 to each color.
+ * Returns { W: n, U: n, B: n, R: n, G: n }
+ */
+export function countColoredPips(cards) {
+  const pips = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+  for (const card of cards) {
+    for (const symbol of parseManaSymbols(card.mana_cost)) {
+      if (symbol.includes('/')) {
+        const parts = symbol.split('/').filter(p => pips.hasOwnProperty(p));
+        for (const p of parts) pips[p] += 1 / parts.length;
+      } else if (pips.hasOwnProperty(symbol)) {
+        pips[symbol] += 1;
+      }
+    }
+  }
+  return pips;
+}
+
+/**
+ * Suggest a basic-land mana base for a deck of nonland cards.
+ * - Land count: 40 minus deck size when the deck is close to complete,
+ *   otherwise a curve-based target (16 low curve / 17 normal / 18 high).
+ * - Distribution: proportional to colored pips, minimum 2 of any color
+ *   with at least one pip (splash coverage).
+ * Returns { total, counts: {W:n,...}, list: [{color, name, count}], text }
+ */
+export function suggestLands(deck) {
+  const nonland = deck.filter(c => !(c.type_line || '').includes('Land'));
+  const pips = countColoredPips(nonland);
+  const totalPips = Object.values(pips).reduce((a, b) => a + b, 0);
+
+  // Curve-based target
+  const withCost = nonland.filter(c => c.cmc > 0);
+  const avgCmc = withCost.length > 0
+    ? withCost.reduce((s, c) => s + c.cmc, 0) / withCost.length
+    : 3;
+  const curveTarget = avgCmc <= 2.4 ? 16 : avgCmc >= 3.4 ? 18 : 17;
+
+  // If deck is near-complete, fill exactly to 40; otherwise use curve target
+  const total = (nonland.length >= 20 && nonland.length <= 26)
+    ? Math.max(14, Math.min(20, 40 - deck.length))
+    : curveTarget;
+
+  const counts = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+  if (totalPips > 0) {
+    // Proportional allocation
+    const colors = COLOR_ORDER.filter(c => pips[c] > 0);
+    let allocated = 0;
+    for (const c of colors) {
+      counts[c] = Math.max(2, Math.round((pips[c] / totalPips) * total));
+      allocated += counts[c];
+    }
+    // Fix rounding drift: trim/add from the color with the most lands / most pips
+    while (allocated !== total && colors.length > 0) {
+      const sorted = [...colors].sort((a, b) => counts[b] - counts[a]);
+      if (allocated > total) {
+        const donor = sorted.find(c => counts[c] > 2) || sorted[0];
+        counts[donor]--;
+        allocated--;
+      } else {
+        counts[sorted[0]]++;
+        allocated++;
+      }
+    }
+  }
+
+  const list = COLOR_ORDER
+    .filter(c => counts[c] > 0)
+    .map(c => ({ color: c, name: LAND_NAMES[c], count: counts[c] }));
+
+  return {
+    total,
+    counts,
+    list,
+    text: list.map(l => `${l.count} ${l.name}`).join(', ') || 'No colored pips yet'
+  };
 }

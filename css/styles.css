@@ -1486,6 +1486,118 @@ body {
   font-style: italic;
 }
 
+/* ===== Auto Lands (deck builder) ===== */
+.auto-lands {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.auto-land-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.auto-land-empty {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ===== Recommended Decks ===== */
+.rec-decks-title {
+  font-size: 1rem;
+  margin: 16px 0 10px;
+}
+
+.rec-deck {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.rec-deck-best {
+  border-color: var(--accent);
+}
+
+.rec-deck-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+  flex-wrap: wrap;
+}
+
+.rec-deck-summary::-webkit-details-marker { display: none; }
+
+.rec-deck-rank {
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.rec-deck-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.rec-deck-score {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.rec-deck-score.strong { background: rgba(46, 125, 50, 0.25); color: #7bd88a; }
+.rec-deck-score.decent { background: rgba(249, 168, 37, 0.2); color: #f2c14e; }
+.rec-deck-score.weak { background: rgba(183, 28, 28, 0.2); color: #ef8a80; }
+
+.rec-deck-warn {
+  font-size: 0.7rem;
+  color: var(--red-mana);
+  font-weight: 600;
+}
+
+.rec-deck-body {
+  padding: 0 14px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.rec-deck-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 8px 0;
+}
+
+.rec-deck-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 2px 12px;
+  margin-bottom: 10px;
+}
+
+.rec-deck-card {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rec-deck-card em {
+  color: var(--text-muted);
+  font-style: normal;
+  font-size: 0.72rem;
+}
+
 /* ===== Utility ===== */
 .hidden { display: none !important; }
 

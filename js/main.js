@@ -9,6 +9,7 @@ import { sortCards, filterCards } from './sorter.js';
 import { DeckBuilder } from './deck-builder.js';
 import { COLORS, GRADE_COLORS } from './utils.js';
 import { findCardSynergies, bestArchetypeForCard, searchCards } from './card-database.js';
+import { buildArchetypeDecks } from './deck-suggest.js';
 
 // ===== App State =====
 let allCards = [];
@@ -148,10 +149,9 @@ function openAllRemaining() {
     currentPool.push(...cards);
   }
 
-  $packReveal.innerHTML = '';
-  renderPackCards(currentPool, $packReveal);
+  // Skip the reveal animation entirely — jump straight to the full pool
   $btnOpenAll.classList.add('hidden');
-  $btnViewPool.classList.remove('hidden');
+  showPoolView();
 }
 
 function showPoolView() {
@@ -437,11 +437,24 @@ function openCardModal(card) {
   }, 0);
 }
 
+// ===== Deck Mode Helper =====
+function enterDeckMode() {
+  isDeckMode = true;
+  $btnToggleView.textContent = 'Pool View';
+  $btnToggleView.classList.add('active');
+  $deckPanel.classList.remove('hidden');
+  $mainContent.classList.add('deck-mode');
+  updateDisplay();
+}
+
 // ===== Strategy Rendering =====
+let recommendedBuilds = [];
+
 function renderStrategy() {
   const affinities = detectCollegeAffinity(currentPool);
   const synergies = findSynergies(currentPool);
   const suggestion = suggestBuild(currentPool);
+  recommendedBuilds = buildArchetypeDecks(currentPool);
 
   const collegeHTML = affinities.map((college, i) => `
     <div class="college-card ${i === 0 ? 'top-pick' : ''}">
@@ -497,16 +510,60 @@ function renderStrategy() {
     ` : ''}
   `;
 
+  // Recommended full decks per archetype, ranked by pool quality
+  const decksHTML = `
+    <h3 class="rec-decks-title">Recommended Decks</h3>
+    ${recommendedBuilds.map((b, i) => {
+      const grade = b.deck.length > 0
+        ? (b.avgScore >= 46 ? 'strong' : b.avgScore >= 35 ? 'decent' : 'weak')
+        : 'weak';
+      return `
+      <details class="rec-deck ${i === 0 ? 'rec-deck-best' : ''}">
+        <summary class="rec-deck-summary">
+          <span class="rec-deck-rank">${i + 1}.</span>
+          <span class="rec-deck-name">${i === 0 ? '⭐ ' : ''}${b.name}</span>
+          ${b.colors.map(c => `<span class="mana-symbol mana-${c.toLowerCase()}">${c}</span>`).join('')}
+          <span class="rec-deck-score ${grade}">avg ${b.avgScore}</span>
+          ${!b.complete ? `<span class="rec-deck-warn">only ${b.deck.length} playables</span>` : ''}
+        </summary>
+        <div class="rec-deck-body">
+          <div class="rec-deck-meta">${b.creatures} creatures · ${b.deck.length - b.creatures} spells · ${b.lands.text}</div>
+          <div class="rec-deck-list">
+            ${b.deck.map(c => `<span class="rec-deck-card" title="${c.rating}">${c.cmc >= 0 ? Math.floor(c.cmc) : ''} · ${c.name} <em>(${c.rating})</em></span>`).join('')}
+          </div>
+          <button class="btn btn-primary btn-small rec-deck-load" data-build-key="${b.key}">Load this deck</button>
+        </div>
+      </details>
+    `;}).join('')}
+  `;
+
   document.getElementById('college-rankings').innerHTML = collegeHTML;
+  document.getElementById('recommended-decks').innerHTML = decksHTML;
   document.getElementById('synergy-list').innerHTML = synergyHTML;
   document.getElementById('build-suggestion').innerHTML = `<div class="build-suggestion">${suggestionHTML}</div>`;
 
   document.getElementById('drawer-college-rankings').innerHTML = `<div class="college-rankings">${collegeHTML}</div>`;
+  document.getElementById('drawer-recommended-decks').innerHTML = decksHTML;
   document.getElementById('drawer-synergy-list').innerHTML = `<div class="synergy-list">${synergyHTML}</div>`;
   document.getElementById('drawer-build-suggestion').innerHTML = `<div class="build-suggestion">${suggestionHTML}</div>`;
 
   wireSynergyClicks(document.getElementById('synergy-list'));
   wireSynergyClicks(document.getElementById('drawer-synergy-list'));
+  wireDeckLoadButtons(document.getElementById('recommended-decks'));
+  wireDeckLoadButtons(document.getElementById('drawer-recommended-decks'));
+}
+
+function wireDeckLoadButtons(container) {
+  container.querySelectorAll('.rec-deck-load').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const build = recommendedBuilds.find(b => b.key === btn.dataset.buildKey);
+      if (!build) return;
+      deckBuilder.setDeck(build.deck);
+      closeSideDrawer();
+      enterDeckMode();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
 }
 
 function wireSynergyClicks(container) {

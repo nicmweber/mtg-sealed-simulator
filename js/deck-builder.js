@@ -1,4 +1,4 @@
-import { isCreature, isSpell, COLORS } from './utils.js';
+import { isCreature, isSpell, COLORS, suggestLands } from './utils.js';
 
 /**
  * Deck builder state management
@@ -53,6 +53,25 @@ export class DeckBuilder {
   }
 
   /**
+   * Replace the current deck with the given cards (must be pool members).
+   * Handles duplicate copies (same Scryfall id) one splice at a time.
+   */
+  setDeck(cards) {
+    // Move everything back to sideboard first
+    this.sideboard.push(...this.deck);
+    this.deck = [];
+
+    for (const card of cards) {
+      let idx = this.sideboard.indexOf(card);
+      if (idx === -1) idx = this.sideboard.findIndex(c => c.id === card.id);
+      if (idx !== -1) {
+        this.deck.push(this.sideboard.splice(idx, 1)[0]);
+      }
+    }
+    this._notify();
+  }
+
+  /**
    * Get deck statistics
    */
   getStats() {
@@ -94,7 +113,8 @@ export class DeckBuilder {
       other,
       manaCurve,
       colorDist,
-      avgCmc
+      avgCmc,
+      lands: suggestLands(this.deck)
     };
   }
 
@@ -105,12 +125,13 @@ export class DeckBuilder {
     const stats = this.getStats();
     const maxCurveCount = Math.max(...Object.values(stats.manaCurve), 1);
 
+    const withLands = stats.totalCards + stats.lands.total;
     container.innerHTML = `
       <div class="deck-stats">
-        <h3>Deck (${stats.totalCards}/40)</h3>
+        <h3>Deck (${stats.totalCards} + ${stats.lands.total} lands = ${withLands}/40)</h3>
         <div class="deck-count-bar ${stats.totalCards < 22 ? 'too-few' : stats.totalCards > 24 ? 'too-many' : 'just-right'}">
-          <div class="deck-count-fill" style="width: ${Math.min(100, (stats.totalCards / 40) * 100)}%"></div>
-          <span class="deck-count-label">${stats.totalCards} cards (need ~23 + 17 lands = 40)</span>
+          <div class="deck-count-fill" style="width: ${Math.min(100, (withLands / 40) * 100)}%"></div>
+          <span class="deck-count-label">${stats.totalCards} spells (target ~23) + auto lands</span>
         </div>
 
         <div class="stats-row">
@@ -156,6 +177,18 @@ export class DeckBuilder {
                 <span>${count}</span>
               </div>
             `).join('')}
+        </div>
+
+        <h4>Auto Lands (pip-weighted)</h4>
+        <div class="auto-lands">
+          ${stats.lands.list.length > 0
+            ? stats.lands.list.map(l => `
+                <div class="auto-land-row">
+                  <span class="mana-symbol mana-${l.color.toLowerCase()}">${l.color}</span>
+                  <span class="auto-land-name">${l.count} ${l.name}</span>
+                </div>
+              `).join('')
+            : '<div class="auto-land-empty">Add cards to calculate lands</div>'}
         </div>
       </div>
     `;
@@ -226,10 +259,15 @@ export class DeckBuilder {
   }
 
   /**
-   * Export deck as plain text
+   * Export deck as plain text (includes the auto-suggested basic lands)
    */
   exportText() {
     const lines = this.deck.map(c => `1 ${c.name}`);
+    const lands = suggestLands(this.deck);
+    if (lands.list.length > 0) {
+      lines.push('');
+      lines.push(...lands.list.map(l => `${l.count} ${l.name}`));
+    }
     lines.push('');
     lines.push('// Sideboard');
     lines.push(...this.sideboard.map(c => `1 ${c.name}`));
