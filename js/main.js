@@ -1,6 +1,7 @@
 import { getCards } from './scryfall.js';
 import { rateAllCards } from './card-ratings.js';
 import { applyPrereleaseAdjustments, applyOverrides } from './rating-adjustments.js';
+import { applyDraftsimRatings } from './draftsim-ratings.js';
 import { generateSealedPool } from './pack-simulator.js';
 import { detectCollegeAffinity, findSynergies, suggestBuild } from './synergy.js';
 import { renderCardTile, renderPackCards, showModal } from './card-display.js';
@@ -56,6 +57,7 @@ async function init() {
     allCards = await getCards();
     rateAllCards(allCards);
     applyPrereleaseAdjustments(allCards);
+    applyDraftsimRatings(allCards);
     applyOverrides(allCards);
     console.log(`Loaded and rated ${allCards.length} cards`);
 

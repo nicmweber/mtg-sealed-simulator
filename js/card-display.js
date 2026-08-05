@@ -195,6 +195,7 @@ export function showModal(card, context = {}) {
   // Rating breakdown
   const hasAdjustment = (card.rating_adjustment ?? 0) !== 0;
   const hasOverride = !!card.rating_user_override;
+  const hasDraftsim = card.rating_source === 'Draftsim';
 
   modal.innerHTML = `
     <div class="modal-content">
@@ -221,10 +222,16 @@ export function showModal(card, context = {}) {
               ${RARITIES[card.rarity]?.name || card.rarity}
             </div>
           </div>
-          ${(hasAdjustment || hasOverride) ? `
+          ${(hasAdjustment || hasOverride || hasDraftsim) ? `
             <div class="modal-rating-breakdown">
-              <div class="breakdown-row"><span class="bd-label">Base:</span> <span class="bd-value">${card.rating_computed && !hasAdjustment ? card.rating_computed : scoreToBaseGrade(card)}</span></div>
-              ${hasAdjustment ? `
+              <div class="breakdown-row"><span class="bd-label">Heuristic:</span> <span class="bd-value">${scoreToBaseGrade(card)}</span></div>
+              ${hasDraftsim ? `
+                <div class="breakdown-row">
+                  <span class="bd-label">Draftsim:</span>
+                  <span class="bd-value">${card.rating_computed}${card.rating_draftsim ? ` (${card.rating_draftsim})` : ''}</span>
+                </div>
+              ` : ''}
+              ${hasAdjustment && !hasDraftsim ? `
                 <div class="breakdown-row">
                   <span class="bd-label">Prerelease:</span>
                   <span class="bd-value">${card.rating_adjustment > 0 ? '+' : ''}${card.rating_adjustment} \u2192 ${card.rating_computed}</span>
