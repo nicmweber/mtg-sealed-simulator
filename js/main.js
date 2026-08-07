@@ -10,6 +10,7 @@ import { DeckBuilder } from './deck-builder.js';
 import { COLORS, GRADE_COLORS } from './utils.js';
 import { findCardSynergies, bestArchetypeForCard, searchCards } from './card-database.js';
 import { buildArchetypeDecks } from './deck-suggest.js';
+import { fuzzySearchCards, saveLivePool, loadLivePool, clearLivePool } from './live-draft.js';
 
 // ===== App State =====
 let allCards = [];
@@ -51,6 +52,12 @@ const $bottomSheet = document.getElementById('bottom-sheet');
 const $bottomSheetOverlay = document.getElementById('bottom-sheet-overlay');
 const $dbSearchContainer = document.getElementById('db-search-container');
 const $dbSearchInput = document.getElementById('db-search');
+const $liveEntry = document.getElementById('live-entry');
+const $liveSearch = document.getElementById('live-search');
+const $liveDropdown = document.getElementById('live-dropdown');
+const $livePoolList = document.getElementById('live-pool-list');
+const $liveCount = document.getElementById('live-count');
+const $btnLiveAnalyze = document.getElementById('btn-live-analyze');
 
 // ===== Initialize =====
 async function init() {
@@ -91,6 +98,7 @@ function startNewPool() {
   $btnViewPool.classList.add('hidden');
   $packReveal.innerHTML = '';
   $hamburger.classList.add('hidden');
+  $liveEntry.classList.add('hidden');
   hideSearchBar();
 
   document.querySelectorAll('.pack-btn').forEach(btn => {
@@ -157,6 +165,7 @@ function openAllRemaining() {
 function showPoolView() {
   currentView = 'pool';
   $packOpening.classList.add('hidden');
+  $liveEntry.classList.add('hidden');
   $toolbar.classList.remove('hidden');
   $mainContent.classList.remove('hidden');
   $strategyPanel.classList.remove('hidden');
@@ -277,6 +286,110 @@ function closeBottomSheet() {
   $bottomSheetOverlay.classList.remove('visible');
   setTimeout(() => $bottomSheetOverlay.classList.add('hidden'), 300);
   bottomSheetCard = null;
+}
+
+// ===== Live Draft Mode =====
+let livePool = [];
+let liveMatches = [];
+let liveActiveIndex = -1;
+
+function enterLiveEntry() {
+  // Restore saved pool on first open
+  if (livePool.length === 0) {
+    livePool = loadLivePool(allCards);
+  }
+
+  $packOpening.classList.add('hidden');
+  $toolbar.classList.add('hidden');
+  $mainContent.classList.add('hidden');
+  $strategyPanel.classList.add('hidden');
+  $deckPanel.classList.add('hidden');
+  $hamburger.classList.add('hidden');
+  hideSearchBar();
+  closeSideDrawer();
+  $liveEntry.classList.remove('hidden');
+
+  renderLivePool();
+  $liveSearch.focus();
+}
+
+function renderLivePool() {
+  $liveCount.textContent = livePool.length;
+  $btnLiveAnalyze.disabled = livePool.length === 0;
+
+  // Group duplicates by name, newest additions first
+  const groups = new Map();
+  for (const card of livePool) {
+    if (!groups.has(card.name)) groups.set(card.name, { card, count: 0 });
+    groups.get(card.name).count++;
+  }
+
+  $livePoolList.innerHTML = [...groups.values()].reverse().map(({ card, count }) => `
+    <div class="live-pool-row" data-card-id="${card.id}">
+      <span class="live-pool-grade" style="background:${GRADE_COLORS[card.rating] || '#666'}">${card.rating}</span>
+      <span class="live-pool-name">${card.name}</span>
+      ${count > 1 ? `<span class="live-pool-qty">×${count}</span>` : ''}
+      <button class="live-pool-remove" title="Remove one copy">&minus;</button>
+    </div>
+  `).join('');
+
+  $livePoolList.querySelectorAll('.live-pool-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.closest('.live-pool-row').dataset.cardId;
+      // Remove the last-added copy of this card
+      for (let i = livePool.length - 1; i >= 0; i--) {
+        if (livePool[i].id === id) { livePool.splice(i, 1); break; }
+      }
+      saveLivePool(livePool);
+      renderLivePool();
+    });
+  });
+}
+
+function addLiveCard(card) {
+  livePool.push(card);
+  saveLivePool(livePool);
+  renderLivePool();
+  $liveSearch.value = '';
+  hideLiveDropdown();
+  $liveSearch.focus();
+}
+
+function renderLiveDropdown() {
+  if (liveMatches.length === 0) {
+    hideLiveDropdown();
+    return;
+  }
+  $liveDropdown.classList.remove('hidden');
+  $liveDropdown.innerHTML = liveMatches.map((card, i) => `
+    <div class="live-dropdown-row ${i === liveActiveIndex ? 'active' : ''}" data-index="${i}">
+      <span class="live-pool-grade" style="background:${GRADE_COLORS[card.rating] || '#666'}">${card.rating}</span>
+      <span class="live-dd-name">${card.name}</span>
+      <span class="live-dd-type">${(card.type_line || '').split(' — ')[0].replace(' // ', '/')}</span>
+    </div>
+  `).join('');
+
+  $liveDropdown.querySelectorAll('.live-dropdown-row').forEach(row => {
+    // mousedown, not click — fires before the input's blur
+    row.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      addLiveCard(liveMatches[parseInt(row.dataset.index)]);
+    });
+  });
+}
+
+function hideLiveDropdown() {
+  $liveDropdown.classList.add('hidden');
+  liveMatches = [];
+  liveActiveIndex = -1;
+}
+
+function analyzeLivePool() {
+  if (livePool.length === 0) return;
+  // Independent copies so deck-builder moves treat each physical card separately
+  currentPool = livePool.map(c => ({ ...c }));
+  $liveEntry.classList.add('hidden');
+  showPoolView();
 }
 
 // ===== Display Updates =====
@@ -707,6 +820,45 @@ document.getElementById('btn-toggle-strategy').addEventListener('click', () => {
   btn.textContent = content.classList.contains('collapsed')
     ? 'Strategy Analysis \u25B6'
     : 'Strategy Analysis \u25BC';
+});
+
+// Live Draft mode
+document.getElementById('btn-live-draft').addEventListener('click', enterLiveEntry);
+$btnLiveAnalyze.addEventListener('click', analyzeLivePool);
+
+document.getElementById('btn-live-clear').addEventListener('click', () => {
+  if (livePool.length > 0 && !confirm(`Clear all ${livePool.length} cards from your live pool?`)) return;
+  livePool = [];
+  clearLivePool();
+  renderLivePool();
+  $liveSearch.focus();
+});
+
+$liveSearch.addEventListener('input', () => {
+  liveMatches = fuzzySearchCards(allCards, $liveSearch.value);
+  liveActiveIndex = liveMatches.length > 0 ? 0 : -1;
+  renderLiveDropdown();
+});
+
+$liveSearch.addEventListener('keydown', (e) => {
+  if (liveMatches.length === 0) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    liveActiveIndex = (liveActiveIndex + 1) % liveMatches.length;
+    renderLiveDropdown();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    liveActiveIndex = (liveActiveIndex - 1 + liveMatches.length) % liveMatches.length;
+    renderLiveDropdown();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (liveActiveIndex >= 0) addLiveCard(liveMatches[liveActiveIndex]);
+  }
+});
+
+$liveSearch.addEventListener('blur', () => {
+  // Delay so a dropdown mousedown can land first
+  setTimeout(hideLiveDropdown, 150);
 });
 
 // Hamburger menu (mobile)

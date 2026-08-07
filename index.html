@@ -16,6 +16,7 @@
       <span class="subtitle">Sealed Simulator</span>
     </div>
     <div class="header-right">
+      <button id="btn-live-draft" class="btn btn-secondary" title="Enter the cards you physically opened">Live Draft</button>
       <button id="btn-new-pool" class="btn btn-primary" title="Generate a new sealed pool">New Pool</button>
     </div>
   </header>
@@ -52,6 +53,22 @@
       </button>
     </div>
   </div>
+
+  <!-- Live Draft Entry -->
+  <section id="live-entry" class="live-entry hidden">
+    <h2>Live Draft Mode</h2>
+    <p class="live-instructions">Type the cards you opened — tap a suggestion (or press Enter) to add it. Your pool is saved on this device.</p>
+    <div class="live-search-wrap">
+      <input type="search" id="live-search" class="live-search-input" placeholder="Start typing a card name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <div id="live-dropdown" class="live-dropdown hidden"></div>
+    </div>
+    <div class="live-pool-header">
+      <span class="live-pool-count"><span id="live-count">0</span> cards in pool</span>
+      <button id="btn-live-clear" class="btn btn-secondary btn-small">Clear Pool</button>
+    </div>
+    <div id="live-pool-list" class="live-pool-list"></div>
+    <button id="btn-live-analyze" class="btn btn-primary" disabled>Analyze Pool &rarr;</button>
+  </section>
 
   <!-- Loading State -->
   <div id="loading" class="loading-screen">
