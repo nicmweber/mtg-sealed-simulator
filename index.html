@@ -62,6 +62,7 @@
       <input type="search" id="live-search" class="live-search-input" placeholder="Start typing a card name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <div id="live-dropdown" class="live-dropdown hidden"></div>
     </div>
+    <button id="btn-live-scan" class="btn btn-secondary live-scan-btn">&#x1F4F7; Scan Cards with Camera</button>
     <div class="live-pool-header">
       <span class="live-pool-count"><span id="live-count">0</span> cards in pool</span>
       <button id="btn-live-clear" class="btn btn-secondary btn-small">Clear Pool</button>
@@ -69,6 +70,30 @@
     <div id="live-pool-list" class="live-pool-list"></div>
     <button id="btn-live-analyze" class="btn btn-primary" disabled>Analyze Pool &rarr;</button>
   </section>
+
+  <!-- Card Scanner Overlay -->
+  <div id="scanner-overlay" class="scanner-overlay hidden">
+    <div class="scanner-topbar">
+      <span class="scanner-title">Scan Cards</span>
+      <label class="scanner-autoadd">
+        <input type="checkbox" id="scanner-auto"> Auto-add
+      </label>
+      <button id="btn-scanner-close" class="scanner-close">&times;</button>
+    </div>
+    <video id="scanner-video" class="scanner-video" playsinline autoplay muted></video>
+    <div class="scanner-guide">
+      <div id="scanner-name-strip" class="scanner-name-strip"></div>
+    </div>
+    <div class="scanner-bottom">
+      <div id="scanner-detect" class="scanner-detect hidden">
+        <span id="scanner-detect-grade" class="live-pool-grade"></span>
+        <span id="scanner-detect-name" class="scanner-detect-name"></span>
+        <button id="btn-scanner-add" class="btn btn-primary">Add</button>
+      </div>
+      <div id="scanner-status" class="scanner-status">Point your camera at a card</div>
+      <div class="scanner-count"><span id="scanner-count">0</span> cards in pool</div>
+    </div>
+  </div>
 
   <!-- Loading State -->
   <div id="loading" class="loading-screen">

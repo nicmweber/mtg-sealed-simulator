@@ -11,6 +11,7 @@ import { COLORS, GRADE_COLORS } from './utils.js';
 import { findCardSynergies, bestArchetypeForCard, searchCards } from './card-database.js';
 import { buildArchetypeDecks } from './deck-suggest.js';
 import { fuzzySearchCards, saveLivePool, loadLivePool, clearLivePool } from './live-draft.js';
+import { startScanner } from './card-scanner.js';
 
 // ===== App State =====
 let allCards = [];
@@ -346,10 +347,14 @@ function renderLivePool() {
   });
 }
 
-function addLiveCard(card) {
+function addCardToLivePool(card) {
   livePool.push(card);
   saveLivePool(livePool);
   renderLivePool();
+}
+
+function addLiveCard(card) {
+  addCardToLivePool(card);
   $liveSearch.value = '';
   hideLiveDropdown();
   $liveSearch.focus();
@@ -390,6 +395,87 @@ function analyzeLivePool() {
   currentPool = livePool.map(c => ({ ...c }));
   $liveEntry.classList.add('hidden');
   showPoolView();
+}
+
+// ===== Camera Scanner =====
+const $scannerOverlay = document.getElementById('scanner-overlay');
+const $scannerVideo = document.getElementById('scanner-video');
+const $scannerStatus = document.getElementById('scanner-status');
+const $scannerDetect = document.getElementById('scanner-detect');
+const $scannerCount = document.getElementById('scanner-count');
+
+let scannerController = null;
+let scannerCandidate = null;      // current detected card awaiting confirm
+let scannerLastAddedAt = 0;
+let scannerLastAutoName = null;   // for two-in-a-row auto-add confirmation
+
+function scannerShowDetect(card, confidence) {
+  scannerCandidate = card;
+  document.getElementById('scanner-detect-name').textContent = card.name;
+  const gradeEl = document.getElementById('scanner-detect-grade');
+  gradeEl.textContent = card.rating;
+  gradeEl.style.backgroundColor = GRADE_COLORS[card.rating] || '#666';
+  $scannerDetect.classList.remove('hidden');
+  $scannerStatus.textContent = `Detected (${Math.round(confidence * 100)}% match) — tap Add or keep scanning`;
+}
+
+function scannerAdd(card) {
+  addCardToLivePool(card);
+  scannerLastAddedAt = Date.now();
+  scannerCandidate = null;
+  scannerLastAutoName = null;
+  $scannerDetect.classList.add('hidden');
+  $scannerCount.textContent = livePool.length;
+  $scannerStatus.textContent = `Added ${card.name} ✓`;
+  if (navigator.vibrate) navigator.vibrate(60);
+}
+
+async function openScanner() {
+  $scannerOverlay.classList.remove('hidden');
+  $scannerCount.textContent = livePool.length;
+  $scannerDetect.classList.add('hidden');
+  scannerCandidate = null;
+  scannerLastAutoName = null;
+
+  const stripEl = document.getElementById('scanner-name-strip');
+
+  scannerController = await startScanner({
+    videoEl: $scannerVideo,
+    cards: allCards,
+    getStripRect: () => {
+      const v = $scannerVideo.getBoundingClientRect();
+      const s = stripEl.getBoundingClientRect();
+      return { x: s.left - v.left, y: s.top - v.top, w: s.width, h: s.height };
+    },
+    onStatus: (msg) => { $scannerStatus.textContent = msg; },
+    onDetect: ({ card, confidence }) => {
+      // Cooldown right after an add so the same card isn't double-counted
+      if (Date.now() - scannerLastAddedAt < 2000) return;
+
+      const autoAdd = document.getElementById('scanner-auto').checked;
+      if (autoAdd) {
+        // Require the same card twice in a row before auto-adding
+        if (scannerLastAutoName === card.name) {
+          scannerAdd(card);
+        } else {
+          scannerLastAutoName = card.name;
+          scannerShowDetect(card, confidence);
+          $scannerStatus.textContent = `Hold steady to auto-add ${card.name}…`;
+        }
+      } else {
+        scannerShowDetect(card, confidence);
+      }
+    }
+  });
+}
+
+function closeScanner() {
+  if (scannerController) {
+    scannerController.stop();
+    scannerController = null;
+  }
+  $scannerOverlay.classList.add('hidden');
+  renderLivePool();
 }
 
 // ===== Display Updates =====
@@ -825,6 +911,13 @@ document.getElementById('btn-toggle-strategy').addEventListener('click', () => {
 // Live Draft mode
 document.getElementById('btn-live-draft').addEventListener('click', enterLiveEntry);
 $btnLiveAnalyze.addEventListener('click', analyzeLivePool);
+
+// Camera scanner
+document.getElementById('btn-live-scan').addEventListener('click', openScanner);
+document.getElementById('btn-scanner-close').addEventListener('click', closeScanner);
+document.getElementById('btn-scanner-add').addEventListener('click', () => {
+  if (scannerCandidate) scannerAdd(scannerCandidate);
+});
 
 document.getElementById('btn-live-clear').addEventListener('click', () => {
   if (livePool.length > 0 && !confirm(`Clear all ${livePool.length} cards from your live pool?`)) return;
