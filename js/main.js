@@ -329,6 +329,7 @@ function renderLivePool() {
     <div class="live-pool-row" data-card-id="${card.id}">
       <span class="live-pool-grade" style="background:${GRADE_COLORS[card.rating] || '#666'}">${card.rating}</span>
       <span class="live-pool-name">${card.name}</span>
+      ${card.rating_draftsim ? `<span class="live-dd-score">${card.rating_draftsim}</span>` : ''}
       ${count > 1 ? `<span class="live-pool-qty">×${count}</span>` : ''}
       <button class="live-pool-remove" title="Remove one copy">&minus;</button>
     </div>
@@ -370,6 +371,7 @@ function renderLiveDropdown() {
     <div class="live-dropdown-row ${i === liveActiveIndex ? 'active' : ''}" data-index="${i}">
       <span class="live-pool-grade" style="background:${GRADE_COLORS[card.rating] || '#666'}">${card.rating}</span>
       <span class="live-dd-name">${card.name}</span>
+      <span class="live-dd-score">${card.rating_draftsim || ''}</span>
       <span class="live-dd-type">${(card.type_line || '').split(' — ')[0].replace(' // ', '/')}</span>
     </div>
   `).join('');

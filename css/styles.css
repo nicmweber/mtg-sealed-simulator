@@ -1682,6 +1682,13 @@ body {
   flex-shrink: 0;
 }
 
+.live-dd-score {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
 .live-pool-header {
   display: flex;
   justify-content: space-between;
