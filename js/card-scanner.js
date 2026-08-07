@@ -150,6 +150,11 @@ export async function startScanner({ videoEl, cards, getStripRect, onStatus, onD
 
   onStatus('Starting camera…');
 
+  if (!navigator.mediaDevices?.getUserMedia) {
+    onStatus('Camera not available in this browser — try opening the site in Safari/Chrome directly (HTTPS required)');
+    return { stop() {} };
+  }
+
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: {

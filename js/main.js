@@ -431,6 +431,8 @@ function scannerAdd(card) {
 }
 
 async function openScanner() {
+  // Overlay opens first so any camera/OCR failure is visible as a status
+  // message rather than a silent dead button
   $scannerOverlay.classList.remove('hidden');
   $scannerCount.textContent = livePool.length;
   $scannerDetect.classList.add('hidden');
@@ -439,7 +441,8 @@ async function openScanner() {
 
   const stripEl = document.getElementById('scanner-name-strip');
 
-  scannerController = await startScanner({
+  try {
+    scannerController = await startScanner({
     videoEl: $scannerVideo,
     cards: allCards,
     getStripRect: () => {
@@ -466,7 +469,11 @@ async function openScanner() {
         scannerShowDetect(card, confidence);
       }
     }
-  });
+    });
+  } catch (err) {
+    $scannerStatus.textContent = `Scanner failed to start: ${err.message}`;
+    console.error('Scanner error:', err);
+  }
 }
 
 function closeScanner() {

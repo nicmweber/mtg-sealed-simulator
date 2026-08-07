@@ -1767,11 +1767,37 @@ body {
 }
 
 /* ===== Camera Scanner ===== */
-.live-scan-btn {
-  width: 100%;
+.live-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
   margin-bottom: 16px;
-  padding: 12px;
-  font-size: 0.95rem;
+}
+
+.live-search-row .live-search-wrap {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.live-scan-btn {
+  flex-shrink: 0;
+  width: 52px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.live-scan-btn:hover,
+.live-scan-btn:active {
+  border-color: var(--accent);
+  background: var(--bg-hover);
 }
 
 .scanner-overlay {

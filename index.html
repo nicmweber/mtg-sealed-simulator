@@ -16,7 +16,7 @@
       <span class="subtitle">Sealed Simulator</span>
     </div>
     <div class="header-right">
-      <button id="btn-live-draft" class="btn btn-secondary" title="Enter the cards you physically opened">Live Draft</button>
+      <button id="btn-live-draft" class="btn btn-secondary" title="Enter the cards you physically opened">Pulse Mode</button>
       <button id="btn-new-pool" class="btn btn-primary" title="Generate a new sealed pool">New Pool</button>
     </div>
   </header>
@@ -54,15 +54,17 @@
     </div>
   </div>
 
-  <!-- Live Draft Entry -->
+  <!-- Pulse Mode Entry -->
   <section id="live-entry" class="live-entry hidden">
-    <h2>Live Draft Mode</h2>
+    <h2>Pulse Mode</h2>
     <p class="live-instructions">Type the cards you opened — tap a suggestion (or press Enter) to add it. Your pool is saved on this device.</p>
-    <div class="live-search-wrap">
-      <input type="search" id="live-search" class="live-search-input" placeholder="Start typing a card name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <div id="live-dropdown" class="live-dropdown hidden"></div>
+    <div class="live-search-row">
+      <div class="live-search-wrap">
+        <input type="search" id="live-search" class="live-search-input" placeholder="Start typing a card name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <div id="live-dropdown" class="live-dropdown hidden"></div>
+      </div>
+      <button id="btn-live-scan" class="live-scan-btn" title="Scan cards with camera">&#x1F4F7;</button>
     </div>
-    <button id="btn-live-scan" class="btn btn-secondary live-scan-btn">&#x1F4F7; Scan Cards with Camera</button>
     <div class="live-pool-header">
       <span class="live-pool-count"><span id="live-count">0</span> cards in pool</span>
       <button id="btn-live-clear" class="btn btn-secondary btn-small">Clear Pool</button>
@@ -191,6 +193,7 @@
     </div>
   </section>
 
-  <script type="module" src="js/main.js"></script>
+  <!-- v= is a cache-buster: bump it whenever any JS module changes -->
+  <script type="module" src="js/main.js?v=2"></script>
 </body>
 </html>
