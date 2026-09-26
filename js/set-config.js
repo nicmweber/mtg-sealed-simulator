@@ -3,70 +3,114 @@
 // update this file (and re-check pack structure in pack-simulator.js).
 
 export const SET_CONFIG = {
-  code: 'hob',
-  name: 'The Hobbit',
+  code: 'fra',
+  name: 'Reality Fracture',
   subtitle: 'Sealed Simulator',
 
-  // Cache freshness: spoiler season is active (set not fully revealed),
-  // so refetch more often than the old 24h.
+  // Cache freshness: spoiler season is active (~62% of the set revealed,
+  // prerelease Sept 25 - Oct 1), so refetch often.
   cacheTtlHours: 6,
 
-  // The five supported 2-color factions. Same shape the old COLLEGES table used
-  // (name, colors, mechanic, themes, description) so all consumers keep working.
-  // mechanicPattern exists because Scryfall's `keywords` array does NOT include
-  // the brand-new mechanics (Storied, recruit) — we fall back to oracle text.
+  // Cards above this collector number are the bonus sheet (#195-280,
+  // alternate-version legends) and basics — excluded from sealed pool
+  // generation. The Browse database still shows everything.
+  mainSetMaxCollector: 194,
+
+  // Ten playable 2-color archetypes: five named Hexhaven-school factions on
+  // the allied pairs (full signpost packages) plus five supported enemy
+  // pairs (dual land + scattered gold cards, no signposts).
+  // mechanicPattern drives detection where Scryfall keywords don't
+  // (Heartwood, noncombat-damage); display uses `mechanic`.
   archetypes: {
-    laketown: {
-      name: 'Lake-town',
+    fatehold: {
+      name: 'Fatehold',
       colors: ['W', 'U'],
-      mechanic: 'Recruit',
-      mechanicPattern: /\brecruits?\b/i,
-      themes: ['token', 'soldier', 'human', 'draw', 'discard'],
-      description: 'White/Blue — Humans & Soldiers going wide with Recruit tokens'
+      mechanic: 'Surveil',
+      mechanicPattern: /whenever you scry or surveil/i,
+      themes: ['surveil', 'scry', 'cadet', '+1/+1 counter', 'token'],
+      description: 'White/Blue — scry/surveil payoffs, Cadet tokens, go-wide counters'
     },
-    ironhills: {
-      name: 'Iron Hills',
-      colors: ['R', 'W'],
-      mechanic: 'Storied',
-      mechanicPattern: /storied|enduring story/i,
-      themes: ['equipment', 'artifact', 'legendary', 'saga', 'dwarf', 'hone'],
-      description: 'Red/White — Dwarves with Equipment, hone counters, and Storied'
+    theorix: {
+      name: 'Theorix',
+      colors: ['U', 'B'],
+      mechanic: 'Threshold',
+      mechanicPattern: /threshold/i,
+      themes: ['mill', 'graveyard', 'threshold', 'flashback'],
+      description: 'Blue/Black — self-mill and graveyard value with Threshold'
     },
-    goblintown: {
-      name: 'Goblin-town',
+    stingerquill: {
+      name: 'Stingerquill',
       colors: ['B', 'R'],
-      mechanic: 'Amass',
-      mechanicPattern: /amass/i,
-      themes: ['amass', 'goblin', 'sacrifice', 'treasure', 'army'],
-      description: 'Black/Red — Goblin aggro with Amass and sacrifice'
+      mechanic: 'Prowess',
+      mechanicPattern: /noncombat damage/i,
+      themes: ['noncombat damage', 'damage to target opponent', 'prowess', 'graveyard'],
+      description: 'Black/Red — aggro-burn; noncombat damage pings unlock payoffs'
     },
-    mirkwood: {
-      name: 'Mirkwood',
+    konstrari: {
+      name: 'Konstrari',
+      colors: ['R', 'G'],
+      mechanic: 'Heartwood',
+      mechanicPattern: /heartwood/i,
+      themes: ['artifact', 'heartwood', 'ramp', 'treasure'],
+      description: 'Red/Green — Heartwood artifact ramp and artifacts-matter'
+    },
+    vigorbloom: {
+      name: 'Vigorbloom',
+      colors: ['G', 'W'],
+      mechanic: 'Counters + Life',
+      mechanicPattern: null,
+      themes: ['+1/+1 counter', 'gain life', 'lifegain'],
+      description: 'Green/White — +1/+1 counters with lifegain payoffs'
+    },
+    // Secondary (enemy-pair) archetypes — supported, no signpost cycle
+    attrition: {
+      name: "Liliana's Attrition",
+      colors: ['W', 'B'],
+      mechanic: 'Sacrifice',
+      mechanicPattern: null,
+      themes: ['sacrifice', 'dies', 'graveyard'],
+      description: 'White/Black — sacrifice and attrition value'
+    },
+    prowessUR: {
+      name: "Chandra's Prowess",
+      colors: ['U', 'R'],
+      mechanic: 'Spells',
+      mechanicPattern: null,
+      themes: ['instant', 'sorcery', 'prowess', 'noncreature spell'],
+      description: 'Blue/Red — spells-matter tempo'
+    },
+    bestiary: {
+      name: "Garruk's Bestiary",
       colors: ['B', 'G'],
-      mechanic: 'Ferocious',
-      mechanicPattern: /ferocious/i,
-      themes: ['power 4', 'wolf', 'spider', 'troll', 'sacrifice', 'graveyard'],
-      description: 'Black/Green — big Ferocious creatures and grindy value'
+      mechanic: 'Big Creatures',
+      mechanicPattern: null,
+      themes: ['deathtouch', 'trample', 'fight'],
+      description: 'Black/Green — big deathtouch/trample creatures'
     },
-    elvenking: {
-      name: "Elvenking's Halls",
+    army: {
+      name: "Ajani's Army",
+      colors: ['R', 'W'],
+      mechanic: 'Counters Aggro',
+      mechanicPattern: null,
+      themes: ['+1/+1 counter', 'attack'],
+      description: 'Red/White — aggressive +1/+1 counters'
+    },
+    mastery: {
+      name: "Jace's Mastery",
       colors: ['G', 'U'],
-      mechanic: 'Landfall',
-      mechanicPattern: /landfall/i,
-      themes: ['landfall', 'land', 'elf', 'ramp', 'additional land'],
-      description: 'Green/Blue — Elves with Landfall, ramp, and extra land drops'
+      mechanic: 'Empower Jace',
+      mechanicPattern: /empower jace/i,
+      themes: ['planeswalker', 'jace', 'loyalty', 'surveil'],
+      description: 'Green/Blue — planeswalker loyalty and Empower Jace'
     }
   },
 
-  // Prerelease tier bonuses. NO event data exists yet for The Hobbit —
-  // start neutral and use tap-to-cycle overrides at the event, or update
-  // these once early prerelease reports come in.
+  // Prerelease tier bonuses. No event data exists yet for Reality Fracture —
+  // start neutral; tune here once prerelease reports land, or use
+  // tap-to-cycle overrides on individual cards at the event.
   tierBonus: {
-    laketown: 0,
-    ironhills: 0,
-    goblintown: 0,
-    mirkwood: 0,
-    elvenking: 0
+    fatehold: 0, theorix: 0, stingerquill: 0, konstrari: 0, vigorbloom: 0,
+    attrition: 0, prowessUR: 0, bestiary: 0, army: 0, mastery: 0
   }
 };
 

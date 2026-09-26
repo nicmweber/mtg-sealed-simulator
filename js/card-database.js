@@ -3,27 +3,31 @@ import { COLLEGES, isCreature, isSpell } from './utils.js';
 // Tag-pair synergy table: when target has tag A, partners with tag B synergize
 const TAG_SYNERGIES = {
   'death-trigger': ['sacrifice', 'tokens'],
-  'sacrifice': ['death-trigger', 'etb', 'tokens', 'treasure', 'amass'],
+  'sacrifice': ['death-trigger', 'etb', 'tokens', 'treasure'],
   'tokens': ['anthem', 'sacrifice', 'recruit'],
   'etb': ['bounce', 'tokens'],
   'bounce': ['etb', 'cast-trigger'],
   'cast-trigger': ['bounce'],
   'lifegain': ['lifegain'],
-  'counters': ['counters', 'amass', 'ferocious'],
+  'counters': ['counters', 'anthem'],
   'card-draw': ['cast-trigger'],
-  'equipment': ['evasion', 'equipment', 'storied'],
-  'combat-trick': ['evasion', 'fight', 'ferocious'],
+  'equipment': ['evasion', 'equipment'],
+  'combat-trick': ['evasion', 'fight'],
   'removal': [],     // removal is always welcome, but doesn't pair with specific tags
-  'anthem': ['tokens', 'recruit', 'amass'],
+  'anthem': ['tokens'],
   'fight': ['combat-trick'],
   'tutor': ['card-draw'],
-  // The Hobbit mechanics
-  'amass': ['amass', 'sacrifice', 'counters', 'anthem'],
+  // Reality Fracture mechanics
+  'empower-jace': ['empower-jace', 'surveil'],
+  'surveil': ['surveil-payoff', 'threshold', 'empower-jace'],
+  'surveil-payoff': ['surveil'],
+  'prepared': ['prepared'],
+  'threshold': ['mill', 'surveil', 'threshold'],
+  'mill': ['threshold'],
+  'burn': ['burn-payoff'],
+  'burn-payoff': ['burn'],
   'landfall': ['landfall', 'ramp'],
   'ramp': ['landfall'],
-  'ferocious': ['counters', 'combat-trick', 'ferocious'],
-  'recruit': ['tokens', 'anthem', 'recruit'],
-  'storied': ['equipment', 'storied'],
   'treasure': ['sacrifice', 'treasure']
 };
 
@@ -44,22 +48,31 @@ const TAG_REASONS = {
   'anthem': 'Anthem',
   'fight': 'Fight effect',
   'tutor': 'Tutor',
-  'amass': 'Amass Army synergy',
+  'empower-jace': 'Empower Jace engine',
+  'surveil': 'Surveil source',
+  'surveil-payoff': 'Scry/surveil payoff',
+  'prepared': 'Prepare synergy',
+  'threshold': 'Threshold payoff',
+  'mill': 'Self-mill enabler',
+  'burn': 'Opponent ping',
+  'burn-payoff': 'Noncombat-damage payoff',
   'landfall': 'Landfall payoff',
-  'ramp': 'Extra lands / ramp',
-  'ferocious': 'Ferocious enabler/payoff',
-  'recruit': 'Recruit synergy',
-  'storied': 'Storied enabler',
+  'ramp': 'Ramp / Heartwood',
   'treasure': 'Treasure synergy'
 };
 
-// Archetype → theme tags (The Hobbit factions)
+// Archetype → theme tags (Reality Fracture)
 const COLLEGE_TAG_AFFINITY = {
-  laketown: ['tokens', 'anthem', 'recruit', 'card-draw'],
-  ironhills: ['equipment', 'storied', 'counters', 'combat-trick'],
-  goblintown: ['amass', 'sacrifice', 'tokens', 'treasure', 'death-trigger'],
-  mirkwood: ['ferocious', 'sacrifice', 'death-trigger', 'counters'],
-  elvenking: ['landfall', 'ramp', 'card-draw', 'counters']
+  fatehold: ['surveil', 'surveil-payoff', 'tokens', 'counters', 'empower-jace'],
+  theorix: ['threshold', 'mill', 'surveil', 'card-draw'],
+  stingerquill: ['burn', 'burn-payoff', 'sacrifice', 'death-trigger'],
+  konstrari: ['ramp', 'treasure', 'counters'],
+  vigorbloom: ['counters', 'lifegain', 'anthem'],
+  attrition: ['sacrifice', 'death-trigger', 'lifegain'],
+  prowessUR: ['cast-trigger', 'burn', 'card-draw', 'bounce'],
+  bestiary: ['fight', 'combat-trick', 'death-trigger'],
+  army: ['counters', 'combat-trick', 'anthem'],
+  mastery: ['empower-jace', 'surveil', 'card-draw', 'ramp']
 };
 
 /**
@@ -131,20 +144,32 @@ export function findCardSynergies(targetCard, allCards) {
       score += 4;
       reasons.add('+1/+1 counter synergy');
     }
-    // The Hobbit bridges
-    if (/storied|enduring story/i.test(text)) {
-      const pt = partner.type_line || '';
-      if (pt.includes('Equipment') || pt.includes('Legendary') || pt.includes('Saga')) {
-        score += 5;
-        reasons.add('Counts toward your story');
-      }
-    }
-    if (/ferocious/i.test(text) && (parseInt(partner.power) || 0) >= 4) {
+    // Reality Fracture bridges
+    if (/whenever you scry or surveil/i.test(text) &&
+        (partner.synergy_tags?.includes('surveil') || partner.keywords?.includes('Surveil') || /scry/i.test(partner.oracle_text || ''))) {
       score += 5;
-      reasons.add('Power 4+ turns on Ferocious');
+      reasons.add('Feeds your scry/surveil trigger');
+    }
+    if (/empower jace|behold a jace/i.test(text) && partner.synergy_tags?.includes('empower-jace')) {
+      score += 5;
+      reasons.add('Shared Jace loyalty engine');
+    }
+    if (/unless you control a planeswalker/i.test(partner.oracle_text || '') &&
+        /empower jace/i.test(text)) {
+      score += 4;
+      reasons.add('Your Jace untaps this land');
+    }
+    if (/threshold|seven or more cards in your graveyard/i.test(text) &&
+        partner.synergy_tags?.includes('mill')) {
+      score += 5;
+      reasons.add('Fills your graveyard for Threshold');
+    }
+    if (/noncombat damage/i.test(text) && partner.synergy_tags?.includes('burn')) {
+      score += 5;
+      reasons.add('Ping enables your payoff');
     }
     if (/landfall/i.test(text) && partner.synergy_tags?.includes('ramp')) {
-      score += 5;
+      score += 4;
       reasons.add('Extra land drops fuel Landfall');
     }
 

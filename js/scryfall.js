@@ -64,8 +64,10 @@ function trimCard(card) {
     if (!trimmed.oracle_text && trimmed.card_faces) {
       trimmed.oracle_text = trimmed.card_faces.map(f => f.oracle_text).filter(Boolean).join('\n---\n');
     }
-    // Use front face mana cost if top-level is empty
-    if (!trimmed.mana_cost && trimmed.card_faces[0]) {
+    // Use front face mana cost if top-level is empty OR a combined
+    // "{U} // {1}{U}" string (FRA prepare cards) — combined strings would
+    // double-count pips in the mana-base math
+    if (trimmed.card_faces[0] && (!trimmed.mana_cost || trimmed.mana_cost.includes(' // '))) {
       trimmed.mana_cost = trimmed.card_faces[0].mana_cost;
     }
     // Use front face colors if top-level is empty

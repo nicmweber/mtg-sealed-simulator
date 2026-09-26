@@ -96,7 +96,7 @@ export function getCardColleges(card) {
     }
 
     // Also check the archetype's mechanic — by keyword, or by oracle text for
-    // brand-new mechanics Scryfall doesn't list in `keywords` (Storied, recruit)
+    // mechanics Scryfall doesn't list in `keywords` (via mechanicPattern)
     const hasMechanic = card.keywords?.includes(college.mechanic) ||
       (college.mechanicPattern && college.mechanicPattern.test(card.oracle_text || ''));
     if (hasMechanic && !colleges.includes(key)) {

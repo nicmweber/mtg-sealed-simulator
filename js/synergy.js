@@ -94,68 +94,81 @@ export function findSynergies(pool) {
   const deathTriggerCards = pool.filter(c => c.synergy_tags?.includes('death-trigger'));
   const sacrificeCards = pool.filter(c => c.synergy_tags?.includes('sacrifice'));
   const etbCards = pool.filter(c => c.synergy_tags?.includes('etb'));
-  const amassCards = pool.filter(c => c.synergy_tags?.includes('amass'));
-  const landfallCards = pool.filter(c => c.synergy_tags?.includes('landfall'));
-  const ferociousCards = pool.filter(c => c.synergy_tags?.includes('ferocious'));
-  const recruitCards = pool.filter(c => c.synergy_tags?.includes('recruit'));
-  const storiedCards = pool.filter(c => c.synergy_tags?.includes('storied'));
-  const equipmentCards = pool.filter(c =>
-    c.synergy_tags?.includes('equipment') || (c.type_line || '').includes('Equipment')
-  );
+  const empowerCards = pool.filter(c => c.synergy_tags?.includes('empower-jace'));
+  const preparedCards = pool.filter(c => c.synergy_tags?.includes('prepared') || c.layout === 'prepare');
+  const surveilCards = pool.filter(c => c.synergy_tags?.includes('surveil'));
+  const surveilPayoffs = pool.filter(c => c.synergy_tags?.includes('surveil-payoff'));
+  const thresholdCards = pool.filter(c => c.synergy_tags?.includes('threshold'));
+  const millCards = pool.filter(c => c.synergy_tags?.includes('mill'));
+  const burnCards = pool.filter(c => c.synergy_tags?.includes('burn'));
+  const burnPayoffs = pool.filter(c => c.synergy_tags?.includes('burn-payoff'));
   const rampCards = pool.filter(c => c.synergy_tags?.includes('ramp'));
   const treasureCards = pool.filter(c => c.synergy_tags?.includes('treasure'));
   const flashbackCards = pool.filter(c => c.keywords?.includes('Flashback'));
 
-  // Amass Goblins (Goblin-town)
-  if (amassCards.length >= 3) {
-    synergies.push({
-      name: 'Amass Goblins (Goblin-town)',
-      description: `${amassCards.length} Amass cards stacking one growing Goblin Army`,
-      cards: amassCards.map(c => c.name),
-      strength: Math.min(10, amassCards.length * 2)
-    });
-  }
-
-  // Equipment / Storied (Iron Hills)
-  if (equipmentCards.length >= 3 || (equipmentCards.length >= 2 && storiedCards.length >= 2)) {
-    synergies.push({
-      name: 'Equipment & Storied (Iron Hills)',
-      description: `${equipmentCards.length} Equipment/hone cards${storiedCards.length > 0 ? ` + ${storiedCards.length} Storied payoff(s) (artifacts count toward your story)` : ''}`,
-      cards: [...equipmentCards.map(c => c.name), ...storiedCards.map(c => c.name)],
-      strength: Math.min(10, equipmentCards.length * 2 + storiedCards.length * 2)
-    });
-  }
-
-  // Landfall (Elvenking's Halls)
-  if (landfallCards.length >= 3) {
-    synergies.push({
-      name: "Landfall (Elvenking's Halls)",
-      description: `${landfallCards.length} Landfall payoffs${rampCards.length > 0 ? ` + ${rampCards.length} extra-land enabler(s)` : ''}`,
-      cards: [...landfallCards.map(c => c.name), ...rampCards.map(c => c.name)],
-      strength: Math.min(10, landfallCards.length * 2 + rampCards.length * 2)
-    });
-  }
-
-  // Ferocious (Mirkwood)
-  if (ferociousCards.length >= 2) {
-    const bigCreatures = pool.filter(c =>
-      isCreature(c) && (parseInt(c.power) || 0) >= 4
+  // Empower Jace — the set's connective tissue
+  if (empowerCards.length >= 2) {
+    const jaceLands = pool.filter(c =>
+      (c.oracle_text || '').includes('unless you control a planeswalker')
     );
     synergies.push({
-      name: 'Ferocious (Mirkwood)',
-      description: `${ferociousCards.length} Ferocious payoffs with ${bigCreatures.length} power-4+ creature(s) to turn them on`,
-      cards: [...ferociousCards.map(c => c.name), ...bigCreatures.slice(0, 4).map(c => c.name)],
-      strength: Math.min(10, ferociousCards.length * 2 + Math.min(bigCreatures.length, 5))
+      name: 'Empower Jace',
+      description: `${empowerCards.length} Empower Jace source(s) — shared loyalty engine${jaceLands.length > 0 ? `, and your ${jaceLands.length} Annex/Commons land(s) enter untapped with a Jace out` : ''}`,
+      cards: [...empowerCards.map(c => c.name), ...jaceLands.map(c => c.name)],
+      strength: Math.min(10, empowerCards.length * 2 + jaceLands.length)
     });
   }
 
-  // Recruit (Lake-town)
-  if (recruitCards.length >= 3) {
+  // Surveil / scry payoffs (Fatehold)
+  if (surveilCards.length >= 3 && surveilPayoffs.length >= 1) {
     synergies.push({
-      name: 'Recruit (Lake-town)',
-      description: `${recruitCards.length} Recruit cards — card selection plus a Soldier token army`,
-      cards: recruitCards.map(c => c.name),
-      strength: Math.min(10, recruitCards.length * 2)
+      name: 'Scry & Surveil (Fatehold)',
+      description: `${surveilCards.length} surveil/scry source(s) feeding ${surveilPayoffs.length} payoff(s)`,
+      cards: [...surveilPayoffs.map(c => c.name), ...surveilCards.slice(0, 5).map(c => c.name)],
+      strength: Math.min(10, surveilCards.length + surveilPayoffs.length * 3)
+    });
+  }
+
+  // Threshold / self-mill (Theorix)
+  if (thresholdCards.length >= 2) {
+    synergies.push({
+      name: 'Threshold (Theorix)',
+      description: `${thresholdCards.length} Threshold payoff(s)${millCards.length > 0 ? ` + ${millCards.length} self-mill enabler(s)` : ''}${flashbackCards.length > 0 ? ` + ${flashbackCards.length} Flashback card(s)` : ''}`,
+      cards: [...thresholdCards.map(c => c.name), ...millCards.map(c => c.name), ...flashbackCards.map(c => c.name)],
+      strength: Math.min(10, thresholdCards.length * 2 + millCards.length + flashbackCards.length)
+    });
+  }
+
+  // Noncombat damage (Stingerquill)
+  if (burnCards.length >= 2 && burnPayoffs.length >= 1) {
+    synergies.push({
+      name: 'Opponent Pings (Stingerquill)',
+      description: `${burnCards.length} noncombat-damage source(s) unlocking ${burnPayoffs.length} payoff(s)`,
+      cards: [...burnPayoffs.map(c => c.name), ...burnCards.map(c => c.name)],
+      strength: Math.min(10, burnCards.length * 2 + burnPayoffs.length * 2)
+    });
+  }
+
+  // Prepared package (double-faced creature-spells)
+  if (preparedCards.length >= 3) {
+    synergies.push({
+      name: 'Prepared Package',
+      description: `${preparedCards.length} prepare cards — creatures that carry repeatable spells`,
+      cards: preparedCards.map(c => c.name),
+      strength: Math.min(10, preparedCards.length * 2)
+    });
+  }
+
+  // Heartwood / artifact ramp (Konstrari)
+  if (rampCards.length >= 3) {
+    const artifactPayoffs = pool.filter(c =>
+      (c.oracle_text || '').match(/artifact(s)? you control/i)
+    );
+    synergies.push({
+      name: 'Heartwood Ramp (Konstrari)',
+      description: `${rampCards.length} ramp/Heartwood source(s)${artifactPayoffs.length > 0 ? ` + ${artifactPayoffs.length} artifacts-matter payoff(s)` : ''}`,
+      cards: [...rampCards.map(c => c.name), ...artifactPayoffs.map(c => c.name)],
+      strength: Math.min(10, rampCards.length * 2 + artifactPayoffs.length)
     });
   }
 
@@ -249,17 +262,6 @@ export function findSynergies(pool) {
       description: `${etbCards.length} enter-the-battlefield effects${bounceCards.length > 0 ? ` + ${bounceCards.length} bounce spell(s) for reuse` : ''}`,
       cards: [...etbCards.slice(0, 5).map(c => c.name), ...bounceCards.map(c => c.name)],
       strength: Math.min(10, etbCards.length + bounceCards.length * 2)
-    });
-  }
-
-  // Adventure flexibility (two spells in one card)
-  const adventureCards = pool.filter(c => c.layout === 'adventure');
-  if (adventureCards.length >= 3) {
-    synergies.push({
-      name: 'Adventure Flexibility',
-      description: `${adventureCards.length} adventure cards give two spells in one — great for sealed consistency`,
-      cards: adventureCards.map(c => c.name),
-      strength: Math.min(10, adventureCards.length * 2)
     });
   }
 

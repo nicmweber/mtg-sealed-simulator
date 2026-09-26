@@ -1,4 +1,17 @@
 import { shuffle, pickRandom } from './utils.js';
+import { SET_CONFIG } from './set-config.js';
+
+/**
+ * Restrict to the main draftable set: bonus-sheet cards (high collector
+ * numbers) and basics don't belong in the simulated packs.
+ */
+function mainSetCards(allCards) {
+  const max = SET_CONFIG.mainSetMaxCollector ?? Infinity;
+  return allCards.filter(c => {
+    const num = parseInt(c.collector_number, 10);
+    return !isNaN(num) && num <= max && !c.type_line.includes('Basic Land');
+  });
+}
 
 /**
  * Generate a single Play Booster pack (14 cards)
@@ -6,10 +19,11 @@ import { shuffle, pickRandom } from './utils.js';
  * We skip the land slot for sealed simulation (not relevant for deckbuilding)
  */
 export function generatePack(allCards) {
-  const commons = allCards.filter(c => c.rarity === 'common' && !c.type_line.includes('Basic Land'));
-  const uncommons = allCards.filter(c => c.rarity === 'uncommon');
-  const rares = allCards.filter(c => c.rarity === 'rare');
-  const mythics = allCards.filter(c => c.rarity === 'mythic');
+  const mainSet = mainSetCards(allCards);
+  const commons = mainSet.filter(c => c.rarity === 'common');
+  const uncommons = mainSet.filter(c => c.rarity === 'uncommon');
+  const rares = mainSet.filter(c => c.rarity === 'rare');
+  const mythics = mainSet.filter(c => c.rarity === 'mythic');
 
   const usedNames = new Set();
   const pack = [];
@@ -75,8 +89,8 @@ export function generateSealedPool(allCards) {
     packs.push(generatePack(allCards));
   }
 
-  // Promo: random rare or mythic from the set
-  const raresAndMythics = allCards.filter(c => c.rarity === 'rare' || c.rarity === 'mythic');
+  // Promo: random rare or mythic from the main set
+  const raresAndMythics = mainSetCards(allCards).filter(c => c.rarity === 'rare' || c.rarity === 'mythic');
   const promoCard = { ...raresAndMythics[Math.floor(Math.random() * raresAndMythics.length)] };
   promoCard.isPromo = true;
   promoCard.foil = true;

@@ -2,9 +2,9 @@ import { scoreToGrade } from './card-ratings.js';
 import { isCreature, getCardColleges } from './utils.js';
 import { SET_CONFIG, OVERRIDES_KEY } from './set-config.js';
 
-// Archetype tier bonuses come from the set config. For The Hobbit these start
-// at 0 (no prerelease data exists yet) — tune them there once reports come in,
-// or use tap-to-cycle overrides on individual cards at the event.
+// Archetype tier bonuses come from the set config. They start at 0 when no
+// prerelease data exists yet — tune them there once reports come in, or use
+// tap-to-cycle overrides on individual cards at the event.
 const TIER_BONUS = SET_CONFIG.tierBonus;
 
 export const GRADE_CYCLE = [
